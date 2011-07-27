@@ -57,6 +57,10 @@ _float_precisions = 'df'
 _numpy_precisions = {'d': numpy.float64, 'f': numpy.float32}
 _int_precisions = 'hilq'
 
+def cast_data(data, prec, ENDIAN='='):
+	num = len(data)/struct.calcsize(prec)
+	return struct.unpack(ENDIAN+str(num)+prec, data)[0]
+
 def cast_array(data, prec, ENDIAN='='):
 	if prec in _int_precisions:
 		num = len(data)/struct.calcsize(prec)
@@ -101,7 +105,9 @@ class FortranRecord(object):
 			data = self.data_str[self._pos:]
 			self._pos = self._len
 
-		return cast_array(data, prec, self.ENDIAN)		
+		if num>1:
+			return cast_array(data, prec, self.ENDIAN)		
+		return cast_data(data, prec, self.ENDIAN)
 
 
 class FortranFile(file):

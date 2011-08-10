@@ -105,9 +105,10 @@ class FortranRecord(object):
 			data = self.data_str[self._pos:]
 			self._pos = self._len
 
-		if num>1:
-			return cast_array(data, prec, self.ENDIAN)		
-		return cast_data(data, prec, self.ENDIAN)
+		if num==1:
+			return cast_data(data, prec, self.ENDIAN)
+		return cast_array(data, prec, self.ENDIAN)		
+
 
 
 class FortranFile(file):

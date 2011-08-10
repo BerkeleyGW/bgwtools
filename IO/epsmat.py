@@ -43,13 +43,13 @@ class epsmatIO:
 
 		#READ
 		buf = f.read_record()
-		self.nq = buf.read('i',1)[0] #number of q-pts in this file
+		self.nq = buf.read('i',1) #number of q-pts in this file
 		self.qpt = buf.read('d') #q-pts
 		self.qpt = self.qpt.reshape(self.nq, len(self.qpt)//self.nq)
 
 		#READ
 		buf = f.read_record()
-		self.ng = buf.read('i',1)[0] #number of g-vects
+		self.ng = buf.read('i',1) #number of g-vects
 		self.gvec_k = buf.read('i') #g-vects
 		self.gvec_k = self.gvec_k.reshape(self.ng, len(self.gvec_k)//self.ng)
 
@@ -64,8 +64,8 @@ class epsmatIO:
 		
 		#READ
 		buf = f.read_record()
-		self.ng_q[cnt] = buf.read('i',1)[0] #same as ng?
-		nmtx = buf.read('i',1)[0] #matrix elements, epsi(G,Gp)
+		self.ng_q[cnt] = buf.read('i',1) #same as ng?
+		nmtx = buf.read('i',1) #matrix elements, epsi(G,Gp)
 		self.nmtx[cnt] = nmtx #size of eps_inv matrix
 
 		#READ
@@ -166,6 +166,12 @@ if __name__=='__main__':
 	epsmat = epsmatIO(sys.argv[1])
 	print epsmat
 	print
+	
+	#I don't know the meaning of this ekin!
+	#for n in xrange(epsmat.nmtx[0]):
+	#	print epsmat.ekin[0][n]
+	
+	
 	#epsmat.get_diag()
 	#for pt in range(epsmat.nq):
 	#	print '%.4f %.4f %.4f  %.8f'%\

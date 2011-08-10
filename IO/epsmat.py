@@ -85,7 +85,7 @@ class epsmatIO:
 		for line in xrange(nmtx):
 			#READ
 			tmp = f.read('d')
-			self.epsmat[-1][line,:] = tmp
+			self.epsmat[-1][:,line] = tmp
 
 	def from_file(self, fname):
 		self.read_header()

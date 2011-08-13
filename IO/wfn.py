@@ -87,7 +87,7 @@ class wfnIO:
 		if self.ftype==1:
 			self.ngk = f.read('i')
 			self.kw = f.read('d')
-			self.kpt = f.read('d').reshape((self.nk,3)).T
+			self.kpt = f.read('d').reshape((self.nk,3))
 
 	def from_file(self, fname):
 		self.read_header()
@@ -124,7 +124,7 @@ class wfnIO:
 			(self.nk,
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
-			array_str(self.kpt.T,50,6).replace('\n','\n\t\t'),
+			array_str(self.kpt,50,6).replace('\n','\n\t\t'),
 			)
 		return str
 

@@ -26,73 +26,33 @@ print time.strftime("%a, %d %b %Y, %H:%M:%S", time.localtime())
 tprint('Reading WFN header')
 
 wfn = wfnIO(sys.argv[1])
-
-kpts_fold = wfn.kpt.T
+kpts_fold = wfn.kpt
 
 max_k = wfn.kgrid[0]*wfn.kgrid[1]*wfn.kgrid[2]
-kpts_co = empty((max_k,3))
+kpts_unfold = empty((max_k,3))
 map_co = empty(max_k)
 n_co=0
 
 tprint('Unfolding BZ')
 
-kpts_co[0,:] =  wfn.kpt[:,0]
+kpts_unfold[0] = kpts_fold[0].copy()
 for ir in xrange(wfn.nk):
 	#print ir, wfn.kpt[:,ir]
 	for it in xrange(wfn.ntran):
-		tmpf = dot(wfn.mtrx[:,:,it], wfn.kpt[:,ir])
+		tmpf = dot(wfn.mtrx[:,:,it], wfn.kpt[ir,:])
 		#put tmpf in box BZ
 		tmpf = tmpf - floor(tmpf)
-		if not any( all(abs(kpts_co[:n_co,:]-tmpf)<TOL_Small,axis=1) ):
-			kpts_co[n_co,:] = tmpf
+		if not any( all(abs(kpts_unfold[:n_co,:]-tmpf)<TOL_Small,axis=1) ):
+			kpts_unfold[n_co,:] = tmpf
 			map_co[n_co] = ir
 			n_co+=1
 
-pts_ = core.records.fromarrays(kpts_co[:n_co].T)
+pts_ = core.records.fromarrays(kpts_unfold[:n_co].T)
 order = argsort(pts_)
-kpts_co = kpts_co[order]
+kpts_unfold = kpts_unfold[order]
 map_co = map_co[order]
 
 tprint('Full box BZ has %s points'%(n_co))
-
-tprint('Populating cells')
-cells = ones(wfn.kgrid, dtype=int)*(-1)
-for n in xrange(n_co):
-	idx = tuple(floor((kpts_co[n]+TOL_Small)*wfn.kgrid))
-	if (cells[idx]!=-1):
-		raise ValueError('Cell already populated')
-	cells[idx] = n
-
-ncell=2
-tprint('Constructing 1st BZ')
-
-#Now, put the points in the 1st BZ
-fq = empty((n_co,3))
-tmpfm = empty((n_co,3))
-bz_kpts = empty((n_co,3))
-lmin = ones(n_co)*inf
-
-for i1 in range(-ncell,ncell):
-	fq[:,0] = kpts_co[:,0] - i1
-	for i2 in range(-ncell,ncell):
-		fq[:,1] = kpts_co[:,1] - i2
-		for i3 in range(-ncell,ncell):
-			fq[:,2] = kpts_co[:,2] - i3
-			u = expand_dims(fq,1)
-			v = expand_dims(fq,2)
-			uv = u*v
-			length = tensordot(uv, wfn.bdot, axes=([1,2],[1,0]))
-			cond=length<lmin
-			if cond.any():
-				lmin[cond] = length[cond]
-				bz_kpts[cond] = fq[cond]
-
-bz_kpts_ = core.records.fromarrays(bz_kpts.T)
-order = argsort(bz_kpts_)
-bz_kpts = bz_kpts[order]
-bz_map = map_co[order]
-
-tprint('Full BZ build')
 
 tprint('Loading SCF_KPOINTS')
 fkpts = open(sys.argv[2])
@@ -109,8 +69,7 @@ for n in xrange(n_fi):
 	q = kpts_fi[n]
 	q_box = kpts_fi[n] - floor(kpts_fi[n])
 
-	#diff = bz_kpts - q
-	diff = kpts_co - q_box
+	diff = kpts_unfold - q_box
 	diff = around(diff) - diff
 	cond = abs(diff) < TOL_Small
 	is_coarse = any( all(cond,axis=1) )

@@ -136,9 +136,9 @@ max_pts=5
 import itertools, random
 def triang_interp(x_,y_,eps_,q, dim):
 	lx_ = len(x_)
-	indx=tuple(arange(lx_))
+	idx=tuple(arange(lx_))
 	if lx_>2:
-		for p_ in itertools.combinations(indx,3):
+		for p_ in itertools.combinations(idx,3):
 			#print p_
 			p=array(p_)
 			x=x_[p]
@@ -248,7 +248,7 @@ if 1:
 			#print '\tGp=',epsmat.gvec_k[indx_Gp]
 			cond = cond_i & cond_j
 			if not(cond.any()):
-				print 'WARNING: no point available for interpolation'
+				print 'WARNING: no point available for interpolation (%d,%d)'%(eps_i,eps_j)
 				eps[eps_i,eps_j] = eps_small
 			else:
 				#selection: which pts of "order" should we take?
@@ -263,11 +263,12 @@ if 1:
 				x = array(kpts_fold[order[selection],0])
 				y = array(kpts_fold[order[selection],1])
 
+				eps[eps_i, eps_j] = triang_interp(x,y,eps_list, q, dim)
+
 				#print
 				#print eps_list
 				#print x
 				#print y
-				eps[eps_i, eps_j] = triang_interp(x,y,eps_list, q, dim)
 				#print eps[eps_i, eps_j]
 
 	#calculate ekin	
@@ -282,7 +283,10 @@ if 1:
 	
 	tprint('\tDumping File')
 	f=open('eps_%d.pkl'%(idx_inpt),'wb')
-	cPickle.dump(G_req, f, cPickle.HIGHEST_PROTOCOL)
+	cPickle.dump(q, f, cPickle.HIGHEST_PROTOCOL)
+	cPickle.dump(isort, f, cPickle.HIGHEST_PROTOCOL)
+	cPickle.dump(isort_i, f, cPickle.HIGHEST_PROTOCOL)
+	cPickle.dump(ekin, f, cPickle.HIGHEST_PROTOCOL)
 	cPickle.dump(eps, f, cPickle.HIGHEST_PROTOCOL)
 	f.close()
 

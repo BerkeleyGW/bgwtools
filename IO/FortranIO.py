@@ -256,7 +256,7 @@ class FortranFile(file):
 		rec = FortranRecord(data_str, self.ENDIAN)
 		return rec
 
-	def write_record(self,s):
+	def writeline(self,s=''):
 		#TODO name consistency with other methods
 		"""Write a record with the given bytes.
 
@@ -324,3 +324,15 @@ class FortranFile(file):
 			self.write(struct.pack(_fmt,item))
 		self._write_check(length_bytes)
 
+	def pack(self, fmt, *data):
+		return struct.pack(self.ENDIAN + fmt, *data)
+	
+	def write_vals(self, fmt, *data):
+		if len(fmt)!=len(data):
+			if len(fmt)==1:
+				fmt*=len(data)
+			else:
+				raise ValueError("fmt and data size don't match")
+			
+		item = self.pack(fmt, *data)
+		self.writeline(item)

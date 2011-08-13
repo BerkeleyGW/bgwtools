@@ -42,9 +42,28 @@ print('Searching vectors')
 vects=[]
 vects_i=[]
 
-#for G_ in arange(-3,4):
-for G_ in arange(-1,2):
-	G = array([0,0,G_])
+n=0
+
+print epsmat.q[0]
+g = epsmat.gvec_k + epsmat.q[n].reshape((1,3))
+print g
+u = expand_dims(g,1)
+v = expand_dims(g,2)
+uv= u*v
+
+ekin = tensordot(uv, wfn.bdot, axes=([1,2],[0,1]))
+
+print ekin
+print epsmat.ekin[0]
+
+
+raise SystemExit()		
+
+
+for G_ in arange(-3,4):
+#for G_ in arange(-1,2):
+	G = array([G_,0,0])
+	#G = array([0,0,G_])
 	cond = all(abs(epsmat.gvec_k[:,:] - G) < TOL_Small, axis=1)
 	if not any(cond): continue
 	srt = where(cond)[0][0]
@@ -55,7 +74,7 @@ for G_ in arange(-1,2):
 	KE = dot(gk,m)
 	n = epsmat.isort_i[qpt][srt]-1
 	if n>=epsmat.nmtx[qpt]:
-		print 'Vector',G,'out of bonds'
+		print 'Vector',G,'out of bonds (KE=%f)'%(KE)
 		continue
 	print epsmat.gvec_k[srt], KE, epsmat.epsmat[qpt][n,n]
 	vects.append(srt)

@@ -49,6 +49,30 @@ def triang_interp(x_,y_,eps_,q, dim):
 	coeff=polyfit(x,y,1)
 	return coeff[0]*q[dim]+coeff[1]
 
+class cell_structure:
+	def __init__(self, pts, ndims):
+		#note: pts must be inside [0.5, 0.5]
+		self.pts = pts
+		self.ncoarse = len(pts)
+		ncoarse = self.npts
+		#number of points in each dimension
+		self.cell_N = ones(3, dtype=int32)
+		if (ndims>0):
+			dim_vol = 1.0
+		prop_const = (ncoarse/dim_vol)**(1.0d0/ndims)
+        do ii=1,3
+          if (active_dim(ii)) then
+            cell_N(ii) = anint(prop_const*(cell_dmax(ii)-cell_dmin(ii)))
+            if (cell_N(ii).lt.1) cell_N(ii)=1
+            if (cell_N(ii).gt.ncoarse) cell_N(ii)=ncoarse
+          endif
+        enddo
+      endif
+		sell.cell = 
+		for i in range(npts):
+			
+	
+
 class epsmat_intp:
 	def __init__(self):
 		pass

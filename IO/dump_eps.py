@@ -11,8 +11,8 @@ def tprint(str_):
 
 tprint('Reading and merging files')
 epsmat = epsmat_merge.merge(sys.argv[1:])
-tprint('Dumping /tmp/epsmat.pkl')
-f=open('/tmp/epsmat.pkl','wb')
+tprint('Dumping epsmat.pkl')
+f=open('epsmat.pkl','wb')
 epsmat.f=None
 cPickle.dump(epsmat, f, cPickle.HIGHEST_PROTOCOL)
 f.close()

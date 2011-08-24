@@ -205,7 +205,7 @@ class epsmatIO:
 		self.fname = fname_old
 		self.f = f_old
 
-	def insert_element(self, q, isort, isort_i, ekin, epsmat):
+	def insert_element(self, q, isort, isort_i, ekin, epsmat, deb=False):
 		data = row_stack((self.q, q.reshape((1,3))))
 		V = core.records.fromarrays( data.T )
 		order = argsort(V)
@@ -215,6 +215,9 @@ class epsmatIO:
 		if len(ekin)!=self.ng:
 			raise ValueError('Size mismatch: ekin and ng')
 
+		if deb:
+			print idx
+			print epsmat
 		nmtx = epsmat.shape[0]
 		self.nq += 1
 		self.isort.insert(idx, isort)
@@ -223,7 +226,20 @@ class epsmatIO:
 		self.q = insert(self.q, idx, q, axis=0)
 		self.qpt = insert(self.qpt, idx, q, axis=0)
 		self.ekin.insert(idx, ekin)
-		self.epsmat.insert(idx,epsmat)
+		self.epsmat.insert(idx, epsmat)
+		if deb:
+			print self.epsmat[idx]
+
+	def remove_element(self, index):
+		#assuming q==qpt!
+		self.nq -= 1
+		self.isort.pop(index)
+		self.isort_i.pop(index)
+		self.nmtx = delete(self.nmtx, index, 0)
+		self.q = delete(self.q, index, 0)
+		self.qpt = delete(self.qpt, index, 0)
+		self.ekin.pop(index)
+		self.epsmat.pop(index)
 
 	def get_diag(self, qpt=0):
 		if (qpt<0)or(qpt>=self.nq):

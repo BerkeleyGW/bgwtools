@@ -11,7 +11,8 @@ import itertools
 
 eps_small=1e-3
 TOL_Small=1e-6
-max_pts=5
+max_pts=8
+verb=False
 
 def tprint(str_):
 	print time.strftime("[%H:%M:%S]", time.localtime()), str_
@@ -22,14 +23,14 @@ def triang_interp(x_,y_,eps_,q, dim):
 	if lx_>2:
 		for p_ in itertools.combinations(idx,3):
 			#print p_
-			p=array(p_)
+			p=asarray(p_)
 			x=x_[p]
 			y=y_[p]
 			eps=eps_[p]
 			A=ones((3,3))
 			A[:,0] = x
 			A[:,1] = y
-			#if linalg.det(A)<TOL_Small: continue
+			if linalg.det(A)<TOL_Small: continue
 			try:
 				a=linalg.solve(A,eps)
 				return a[0]*q[0] + a[1]*q[1] + a[2]
@@ -43,11 +44,24 @@ def triang_interp(x_,y_,eps_,q, dim):
 
 	if dim==0: x=x_
 	else: x=y_
+
+	#center points around q
+	x = x - q[dim]
 	srt = argsort(x)
 	x=x[srt]
+
+	if x[1]==x[0]:
+		#points are useless, return nn
+		return eps_[0]
+
 	y=eps_[srt]
-	coeff=polyfit(x,y,1)
-	return coeff[0]*q[dim]+coeff[1]
+	if lx_==2:
+		#no fit is necessary
+		#a=(y[1]-y[0])/(x[1]-x[0])
+		b=(y[0]*x[1] - y[1]*x[0])/(x[1]-x[0])
+	else:
+		a,b=polyfit(x,y,1)
+	return b
 
 class epsmat_intp:
 	def __init__(self):
@@ -57,7 +71,7 @@ class epsmat_intp:
 		self.wfn = wfn
 		self.epsmat = epsmat
 		self.kpts_fi = kpts_fi
-		self.kpts_fold = wfn.kpt
+		self.kpts_fold = epsmat.q
 		kpts_fold = self.kpts_fold
 
 		max_k = wfn.kgrid[0]*wfn.kgrid[1]*wfn.kgrid[2]
@@ -66,7 +80,7 @@ class epsmat_intp:
 		self.n_co = 0
 
 		if verb: tprint('Unfolding BZ')
-		kpts_unfold[0] = kpts_fold[0].copy()
+		kpts_unfold[0] = kpts_fold[0]
 
 		for ir in xrange(self.wfn.nk):
 			for it in xrange(self.wfn.ntran):
@@ -77,6 +91,7 @@ class epsmat_intp:
 					self.kpts_unfold[self.n_co,:] = tmpf
 					#map_co[n_co] = ir
 					self.n_co += 1
+		
 		if verb: tprint('Full box BZ has %s points'%(self.n_co))
 
 		pts_ = core.records.fromarrays(self.kpts_unfold[:self.n_co].T)
@@ -99,8 +114,8 @@ class epsmat_intp:
 				self.pts_intp.append(q)
 
 		self.pts_intp = array(self.pts_intp)
-		self.dq_fi = (self.kpts_fi[1]-self.kpts_fi[0])[1]
-		self.dq_co = (self.kpts_fold[1]-self.kpts_fold[0])[1]
+		self.dq_fi = (self.kpts_fi[2]-self.kpts_fi[1])[1]
+		self.dq_co = (self.kpts_fold[2]-self.kpts_fold[1])[1]
 		
 		if verb:
 			print ' %s points will be interp., %d will be copyied'\
@@ -123,11 +138,12 @@ class epsmat_intp:
 			q = pts_intp[idx_inpt]
 			tprint('Dealing with point #%d: %s'%(idx_inpt,str(q)))
 
+			#calculating ekin
 			gk = epsmat.gvec_k + q.reshape((1,3))
 			u = expand_dims(gk,1)
 			v = expand_dims(gk,2)
 			uv= u*v
-			KE = tensordot(uv, wfn.bdot, axes=([1,2],[0,1]))	
+			KE = tensordot(uv, wfn.bdot, axes=([1,2],[0,1]))
 			G = epsmat.gvec_k.T
 			V = core.records.fromarrays([KE,G[0],G[1],G[2]])
 			
@@ -159,10 +175,17 @@ class epsmat_intp:
 
 			#Finding closets points, calculating all distances simultaneously
 			diff = kpts_fold - q
-			u = expand_dims(diff,1)
-			v = expand_dims(diff,2)
-			uv = u*v
-			dist = tensordot(uv, wfn.bdot, axes=([1,2],[1,0]))
+
+			#0=cartesian, 1=wfn.bdot
+			metric=0
+			if metric!=0:
+				u = expand_dims(diff,1)
+				v = expand_dims(diff,2)
+				uv = u*v
+				dist = tensordot(uv, wfn.bdot, axes=([1,2],[1,0]))
+			else:
+				dist = sum(diff**2, axis=1)
+
 			order = argsort(dist)[:10]
 			range_order = arange(len(order))
 			
@@ -179,8 +202,8 @@ class epsmat_intp:
 				map_ = epsmat.isort_i[qpt_co][eps2G]-1
 				eps2eps_co.append(map_)
 				is_avail.append(map_ < epsmat.nmtx[qpt_co])
-			eps2eps_co = array(eps2eps_co)
-			is_avail = array(is_avail)
+			eps2eps_co = asarray(eps2eps_co)
+			is_avail = asarray(is_avail)
 
 			eps=empty((nmtx,nmtx))
 			#eps_i, eps_j: loop over row/columns of eps
@@ -193,7 +216,7 @@ class epsmat_intp:
 					#print '\tGp=',epsmat.gvec_k[indx_Gp]
 					cond = cond_i & cond_j
 					if not(cond.any()):
-						print 'WARNING: no point available for interp (%d,%d)'%(eps_i,eps_j)
+						print 'WARNING: no point available for interpolation (%d,%d)'%(eps_i,eps_j)
 						eps[eps_i,eps_j] = eps_small
 					else:
 						#selection: which pts of "order" should we take?
@@ -203,18 +226,19 @@ class epsmat_intp:
 						eps_co_i = eps2eps_co[:,eps_i]
 						eps_co_j = eps2eps_co[:,eps_j]
 
-						eps_list = array([epsmat.epsmat[order[n]]\
+						eps_list = asarray([epsmat.epsmat[order[n]]\
 							[eps_co_i[n], eps_co_j[n]] for n in selection])
-						x = array(kpts_fold[order[selection],0])
-						y = array(kpts_fold[order[selection],1])
+						x = asarray(kpts_fold[order[selection],0])
+						y = asarray(kpts_fold[order[selection],1])
 
 						eps[eps_i, eps_j] = triang_interp(x,y,eps_list, q, dim)
 
-						#print
-						#print eps_list
-						#print x
-						#print y
-						#print eps[eps_i, eps_j]
+						if verb:
+							print
+							print eps_list
+							print x
+							print y
+							print eps[eps_i, eps_j]
 
 			#calculate ekin	
 			g = epsmat.gvec_k + q.reshape((1,3))# + epsmat.q[0]
@@ -243,13 +267,14 @@ if __name__=='__main__':
 	from wfn import wfnIO
 	from epsmat import epsmatIO
 
-	if len(sys.argv)!=4:
-		print 'Usage: %s [WFN] [EPSMAT] [SCF_KPOINTS]'%(sys.argv[0])
+	if len(sys.argv)!=3:
+		print 'Usage: %s [WFN] [SCF_KPOINTS]'%(sys.argv[0])
+		print 'Note: epsmat.pkl (produced by dump_eps.py) must be present' 
 		sys.exit()
 
 	print time.strftime("%a, %d %b %Y, %H:%M:%S", time.localtime())
 
-	fname = sys.argv[3]
+	fname = sys.argv[2]
 	tprint('Loading list of fine points from %s'%(fname))
 	fkpts = open(fname)
 	n_fi = int(fkpts.readline())
@@ -263,7 +288,7 @@ if __name__=='__main__':
 	wfn = wfnIO(sys.argv[1])
 
 	tprint('Loading epsmat file from %s'%(sys.argv[2]))
-	f=open('/tmp/epsmat.pkl','rb')
+	f=open('epsmat.pkl','rb')
 	epsmat = cPickle.load(f)
 	f.close()
 	#epsmat = epsmatIO(sys.argv[2])

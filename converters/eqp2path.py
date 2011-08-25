@@ -120,15 +120,23 @@ for items in kpts_str.split(':'):
 	if len(vals)>3:
 		labels.append(vals[3])
 	else:
-		labels.append(' ')
-
+		kp = asarray(kpt)
+		if all(fabs(kp)<1e-6):
+			labels.append(r'\Gamma')
+		else:
+			labels.append('')
 if len(kpts)<2:
 	kpts=[[0,0,0],[0.5,0.5,0]]
 	labels=[1,2]
 
-print kpts
-print labels
-
+print 'Using %s values'%(opts.data)
+print 'Creating path:'
+for i in range(len(kpts)):
+	kp=kpts[i]
+	txt=labels[i]
+	if len(txt): txt='(%s)'%(txt)
+	print '  %f, %f, %f        %s'%(kp[0],kp[1],kp[2],txt)
+	
 X,Y,Z,V = get_data_from_eqp(args[0])
 x,y,z,v = create_path(X,Y,Z,V)
 save_data=column_stack([x,y,z,v])

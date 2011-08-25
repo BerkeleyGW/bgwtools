@@ -1,8 +1,5 @@
-syntax: glob
-
 *.o
 *.x
-*.svn*
 *.mod
 *.p.f
 *.pyc

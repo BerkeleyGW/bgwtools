@@ -5,62 +5,87 @@ from numpy import *
 import pylab as p
 import scipy
 import scipy.signal
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
-#colors=['blue','red','yellow']
-#colors=['blue','gray']
-#colors=['red','blue','gray']
-#colors=['red','blue','green','gray']
-colors=['red','blue']*2
-#colors=['green','blue','red']
-#lss=['-','--',':']
-lss=['-','-',':',':']
 plot_dict={'abs':0, 'e2':1, 'e1':2, 'dos':3}
 ylabels=[r'$\mathrm{Absorbance}$', r'$\varepsilon_2$',r'$\varepsilon_1$',r'$\mathrm{DOS}$']
 
+############
+#  Parser  #
+############
 usage = "usage: %prog [options] file"
 parser = OptionParser(usage)
-parser.add_option('--ymin',dest='ymin', default=0.0, type='float',
-	help='minimum value of y to plot')
-parser.add_option('--ymax',dest='ymax', type='float',
-	help='maximum value of y to plot')
-parser.add_option('--xmin',dest='xmin', default=0.0, type='float',
-	help='miminum value of x to plot')
-parser.add_option('--xmax',dest='xmax', default=7.0, type='float',
-	help='maximum value of x to plot')
-parser.add_option('-p','--plot',dest='plot',default='abs',type='choice',choices=['abs','e1','e2','dos'],
-	help='specify what is to be plotted. Defaults to abs')
 
-parser.add_option('-s','--smooth', dest='smooth', default='none',
+group_range = OptionGroup(parser, 'Data Range')
+group_range.add_option('--ymin',dest='ymin', default=0.0, type='float',
+	help='minimum value of y to plot')
+group_range.add_option('--ymax',dest='ymax', type='float',
+	help='maximum value of y to plot')
+group_range.add_option('--xmin',dest='xmin', default=0.0, type='float',
+	help='miminum value of x to plot')
+group_range.add_option('--xmax',dest='xmax', default=7.0, type='float',
+	help='maximum value of x to plot')
+opts=plot_dict.keys()
+opts.sort()
+group_range.add_option('-p',dest='plot',default='abs',type='choice',choices=opts,
+	help='specify what is to be plotted. Defaults to abs. Choices are: '+
+	', '.join(opts))
+parser.add_option_group(group_range)
+
+group_smooth = OptionGroup(parser, 'Data Smoothing and Asymmetry Analysis')
+group_smooth.add_option('-s', dest='smooth', default='none',
 	choices=['none','wiener','gaussian','lorentzian'],
 	help='smooth the data. Options are none, wiener, gaussian and lorentzian')
-parser.add_option('--window', dest='window', type='int', default=31,
+group_smooth.add_option('--window', dest='window', type='int', default=31,
 	help='size of the window used in the Wiener filter')
-parser.add_option('--sigma', type='float', default=0.5,
+group_smooth.add_option('--sigma', type='float', default=0.5,
 	help='stardard deviation of the gaussian/lorentzian filter')
-parser.add_option('--asymmetry', dest='asymmetry',  default=False, action='store_true',
+group_smooth.add_option('--asymmetry', dest='asymmetry',  default=False, action='store_true',
 	help='calculate and plot asymmetry of the peak')
+parser.add_option_group(group_smooth)
 
-parser.add_option('-t','--title',type='str',
+group_visual = OptionGroup(parser, 'Aesthetics')
+group_visual.add_option('-t','--title',type='str',
 	help='title')
-parser.add_option('-l','--labels',type='str',
-	help='semi-column-separated list of labels')
+group_visual.add_option('-l','--labels',type='str',
+	help='semi-column-separated list of labels for the plots')
+group_visual.add_option('--colors', type='str', default='',
+	help='comma-separated list of colors. Eg: red, blue')
+group_visual.add_option('--linestyles', type='str', default='',
+	help='comma-separated list of line styles. Eg: -,:,;')
+parser.add_option_group(group_visual)
+
 parser.add_option('-o',dest='output',type='str',metavar='FILE',
 	help='output the graph to FILE')
-parser.add_option('--load', type='str',
-	help='load external python file')
-#parser.add_option('--peak',dest='peak',default=False,action='store_true',
-#	help='print the peak position')
+parser.add_option('--load', type='str',metavar='FILE',
+	help='load external python file with configurations')
 
+###################
+#  Configuration  #
+###################
 (opts,args) = parser.parse_args()
-
-delta_E_l = None
+delta_E_l = None #used for asymmetry analysis
 if opts.load:
 	execfile(opts.load)
 
 if len(args)<1:
 	parser.error('incorrect number of arguments')
 
+#labels
+labels=[]
+if opts.labels:
+	if len(opts.labels):
+		labels=opts.labels.split(';')
+#colors
+colors=[]
+if opts.colors:
+	if len(opts.colors):
+		colors=[s.strip() for s in opts.colors.split(',')]
+#linestyles
+linestyles=[]
+if opts.linestyles:
+	if len(opts.linestyles):
+		linestyles=[s.strip() for s in opts.linestyles.split(',')]
 if opts.output:
 	fig_width_pt = 246.0*2.0	# Get this from LaTeX using \showthe\columnwidth
 	inches_per_pt = 1.0/72.27               # Convert pt to inch
@@ -85,16 +110,16 @@ else:
 	#p.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9)
 	params = {'figure.figsize': [10,5]}
 
+#Initilize Plot
 p.rcParams.update(params)
 if opts.output:
 	p.axes([0.1,0.16,0.95-0.1,0.95-0.2])
 
 plot_idx = plot_dict[opts.plot]
-labels=[]
-if opts.labels:
-	if len(opts.labels):
-		labels=opts.labels.split(';')
 
+###########
+#  Plot!  #
+###########
 cnt=0
 data=[]
 data_max=0
@@ -128,9 +153,9 @@ for fname in args:
 
 
 	data.append(d)
-	idx=argmax(y[x<opts.xmax])
+	idx=argmax(y[(x<opts.xmax)&(x>opts.xmin)])+sum(x<=opts.xmin)
 	print 'File:',fname
-	print ' peak: %.3f, %.3f'%(x[idx],y[idx])
+	print '  peak: %.3f, %.3f'%(x[idx],y[idx])
 	data_max = max(data_max, max(y[(x>opts.xmin)&(x<opts.xmax)]))
 
 	if opts.asymmetry:
@@ -161,23 +186,16 @@ for fname in args:
 	else:
 		label=labels[cnt]
 
-	#plot	
+	#plot
+	plot_data = p.plot(x,y, label=label, lw=1.5)
 	if cnt<len(colors):
-		col=colors[cnt]
-		ls=lss[cnt]
-		p.plot(x,y, label=label, lw=1.5, color=col, ls=ls)
-		#p.plot(x_l, y_reg_l, ls='-', lw=3, color=col, alpha=0.5)
-		#p.plot(x_r, y_reg_r, ls='-', lw=3, color=col, alpha=0.5)
-		if opts.asymmetry:
-			#p.axvline(x[idx], color=colors[cnt], ls=':', lw=1.5, alpha=0.75)
-			p.plot (x[idx],y[idx],'o', color=colors[cnt], ms=8, mew=0, alpha=0.5)
-	else:
-		p.plot(x,y, label=label, lw=1.5)
-		if opts.asymmetry:
-			p.axvline(x[idx], ls=':', lw=1.5, alpha=0.75)
-			#p.plot (x[idx],y[idx],'o', ms=8, mew=0, alpha=0.5)
-
+		plot_data[0].set_color(colors[cnt])
+	if cnt<len(linestyles):
+		plot_data[0].set_linestyle(linestyles[cnt])
 	if opts.asymmetry:
+		p.plot(x[idx],y[idx], 'o' ,ms=8, mew=0, alpha=0.5,
+			color=plot_data[0].get_color())
+		#p.axvline(x[idx], ls=':', lw=1.5, alpha=0.75)
 		p.plot([x_l[0],x_l[-1]],[y_reg_l[0],y_reg_l[-1]],color='black',lw=3,ls='--')
 		p.plot([x_r[0],x_r[-1]],[y_reg_r[0],y_reg_r[-1]],color='black',lw=3,ls='--')
 
@@ -193,7 +211,6 @@ else:
 p.xlabel(r'$E\;(eV)$')
 p.ylabel(ylabels[plot_idx])
 
-#xmin,xmax = p.xlims()
 p.xlim(opts.xmin, opts.xmax)
 if not (opts.ymax is None):
 	p.ylim(opts.ymin, opts.ymax)

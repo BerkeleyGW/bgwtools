@@ -23,11 +23,17 @@
 #     around the average spacing of your grid.
 
 eqp2path=../converters/eqp2path.py
+plot_bands=../plot/plot_bands.py
+
 path='0:0,.5:0.025,0.475:.325,.325:0'
 
-echo 'Creating path for coarse band structure (LDA+GW)'
-$eqp2path -m 1e-2 -k $path --data LDA eqp_co.corrections path.co_LDA
-$eqp2path -m 1e-2 -k $path --data GW  eqp_co.corrections path.co_GW
+echo 'Creating path for coarse band structure (LDA and GW)'
+cmd="$eqp2path -m 1e-2 -k $path --data LDA eqp_co.corrections path_LDA"
+echo $cmd
+$cmd
+cmd="$eqp2path -m 1e-2 -k $path --data GW  eqp_co.corrections path_GW"
+echo $cmd
+$cmd
 
 # You could also create a path using the interpolated eqp.corrections,
 #   produced by diag/haydock
@@ -35,6 +41,9 @@ $eqp2path -m 1e-2 -k $path --data GW  eqp_co.corrections path.co_GW
 #$eqp2path -m 1e-3 -k $path --data LDA eqp.corrections path.fi_LDA
 #$eqp2path -m 1e-3 -k $path --data GW  eqp.corrections path.fi_GW
 
+# Note: the Fermi levels are outputs from PARATEC/BerkeleyGW
+#       For graphene, we could have asked the code to automatically guess the
+#       FE by using the --auto_FE flag (instead of --fermi ... )
 echo 'Plotting LDA and GW bandstructure'
-
-
+cmd="$plot_bands --labels LDA,GW --fermi -1.529,-1.459945 path_LDA path_GW"
+$cmd

@@ -33,8 +33,10 @@ def get_data_from_eqp(fname, column=1):
 			item_num+=1
 			if (item_num==items_cnt):
 				item_num=-1
+
 	bands=[v.keys() for v in Vl_LDA]
 	bands=array(sorted(unique(array(bands))))
+	#print bands
 	V_LDA = ma.masked_all( (len(X),len(bands)) )
 	V_GW  = ma.masked_all( (len(X),len(bands)) )
 	i=0
@@ -50,5 +52,5 @@ def get_data_from_eqp(fname, column=1):
 		V_GW.mask[i,:][indices] = False
 		i+=1
 
-	return array(X),array(Y),array(Z), V_LDA, V_GW
+	return bands,array(X),array(Y),array(Z), V_LDA, V_GW
 

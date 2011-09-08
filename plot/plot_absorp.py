@@ -166,19 +166,38 @@ for fname in args:
 			window_E_l = 0.45
 			window_E_r = 0.25
 
-		delta_idx_l = int(delta_E_l/(x[1]-x[0]))
-		delta_idx_r = int(delta_E_r/(x[1]-x[0]))
-		window_idx_l = int(window_E_l/(x[1]-x[0]))
-		window_idx_r = int(window_E_r/(x[1]-x[0]))
-		x_r = x[idx + delta_idx_r : idx + delta_idx_r + window_idx_r]
-		y_r = y[idx + delta_idx_r : idx + delta_idx_r + window_idx_r]
-		x_l = x[idx - delta_idx_l - window_idx_l : idx - delta_idx_l]
-		y_l = y[idx - delta_idx_l - window_idx_l : idx - delta_idx_l]
-		#linear regression
-		a_r,b_r = scipy.polyfit(x_r, y_r, 1)
-		a_l,b_l = scipy.polyfit(x_l, y_l, 1)
-		y_reg_r = scipy.polyval([a_r,b_r],x_r)
-		y_reg_l = scipy.polyval([a_l,b_l],x_l)
+		if (1):
+			#find largest slope
+			window = int(1/dx)
+			step=5
+			#left
+			rng = arange(idx-window,idx,step)
+			slope = y[rng] - y[rng-1]
+			x_l = x[idx-window + argmax(slope)*step]
+			y_l = y[idx-window + argmax(slope)*step]
+			#print x_l, y_l
+			a_l = amax(slope)/(dx)
+			#right
+			rng = arange(idx,idx+window,step)
+			slope = y[rng+1] - y[rng]
+			x_r = x[idx + argmin(slope)*step]
+			y_r = y[idx + argmin(slope)*step]
+			#print x_r,y_r
+			a_r = amin(slope)/(dx)
+		else:	
+			delta_idx_l = int(delta_E_l/(x[1]-x[0]))
+			delta_idx_r = int(delta_E_r/(x[1]-x[0]))
+			window_idx_l = int(window_E_l/(x[1]-x[0]))
+			window_idx_r = int(window_E_r/(x[1]-x[0]))
+			x_r = x[idx + delta_idx_r : idx + delta_idx_r + window_idx_r]
+			y_r = y[idx + delta_idx_r : idx + delta_idx_r + window_idx_r]
+			x_l = x[idx - delta_idx_l - window_idx_l : idx - delta_idx_l]
+			y_l = y[idx - delta_idx_l - window_idx_l : idx - delta_idx_l]
+			#linear regression
+			a_r,b_r = scipy.polyfit(x_r, y_r, 1)
+			a_l,b_l = scipy.polyfit(x_l, y_l, 1)
+			y_reg_r = scipy.polyval([a_r,b_r],x_r)
+			y_reg_l = scipy.polyval([a_l,b_l],x_l)
 		print ' asymmetry:',-a_r/a_l
 
 	if cnt>=len(labels):
@@ -187,7 +206,7 @@ for fname in args:
 		label=labels[cnt]
 
 	#plot
-	plot_data = p.plot(x,y, label=label, lw=1.5)
+	plot_data = p.plot(x,y, '-',label=label, lw=1.5)
 	if cnt<len(colors):
 		plot_data[0].set_color(colors[cnt])
 	if cnt<len(linestyles):
@@ -196,10 +215,14 @@ for fname in args:
 		p.plot(x[idx],y[idx], 'o' ,ms=8, mew=0, alpha=0.5,
 			color=plot_data[0].get_color())
 		#p.axvline(x[idx], ls=':', lw=1.5, alpha=0.75)
-		p.plot([x_l[0],x_l[-1]],[y_reg_l[0],y_reg_l[-1]],color='black',lw=3,ls='--')
-		p.plot([x_r[0],x_r[-1]],[y_reg_r[0],y_reg_r[-1]],color='black',lw=3,ls='--')
+		delta=0.2
+		p.plot([x_l-delta, x_l+delta], [y_l-delta*a_l, y_l+delta*a_l], '--', color='black', lw=3 )
+		p.plot([x_r-delta, x_r+delta], [y_r-delta*a_r, y_r+delta*a_r], '--', color='black', lw=3 )
+		#p.plot([x_l[0],x_l[-1]],[y_reg_l[0],y_reg_l[-1]],color='black',lw=3,ls='--')
+		#p.plot([x_r[0],x_r[-1]],[y_reg_r[0],y_reg_r[-1]],color='black',lw=3,ls='--')
 
 	cnt+=1
+	print
 
 p.legend(loc='upper left')
 

@@ -133,9 +133,9 @@ def plot_file(fname, cnt, fact=1.0):
 		print '  Fermi Energy:',FE
 		bands[:,:] -= FE
 
-	c_min = min(bands[bands>0])
-	v_max = max(bands[bands<0])
-	print '  Gap arround E=0:',c_min-v_max
+	#c_min = min(bands[bands>0])
+	#v_max = max(bands[bands<0])
+	#print '  Gap arround E=0:',c_min-v_max
 
 	label=fname
 	if cnt<len(labels):

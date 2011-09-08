@@ -50,25 +50,25 @@ class wfnIO:
 
 		#READ
 		buf = f.read_record()
-		self.kmax = array([buf.read('i',1) for n in range(3)])
+		self.kmax = buf.read('i',3)
 		#only for wfn
 		if self.ftype==1:
-			self.kgrid = array([buf.read('i',1) for n in range(3)])
-			self.kshift = array([buf.read('d',1) for n in range(3)])
+			self.kgrid = buf.read('i',3)
+			self.kshift = buf.read('d',3)
 
 		#READ
 		buf = f.read_record()
 		self.celvol = buf.read('d',1)
 		self.alat = buf.read('d',1)
-		self.avec = array([buf.read('d',1) for n in range(9)]).reshape((3,3))
-		self.adot = array([buf.read('d',1) for n in range(9)]).reshape((3,3))
+		self.avec = buf.read('d',9).reshape((3,3)).T
+		self.adot = buf.read('d',9).reshape((3,3)).T
 		
 		#READ
 		buf = f.read_record()
 		self.recvol = buf.read('d',1)
 		self.blat = buf.read('d',1)
-		self.bvec = array([buf.read('d',1) for n in range(9)]).reshape((3,3))
-		self.bdot = array([buf.read('d',1) for n in range(9)]).reshape((3,3))
+		self.bvec = buf.read('d',9).reshape((3,3)).T
+		self.bdot = buf.read('d',9).reshape((3,3)).T
 		
 		#READ
 		self.mtrx = f.read('i').reshape((self.ntran,3,3)).T #symmetry el
@@ -87,7 +87,13 @@ class wfnIO:
 		if self.ftype==1:
 			self.ngk = f.read('i')
 			self.kw = f.read('d')
-			self.kpt = f.read('d').reshape((self.nk,3))
+			self.kpt = f.read('d').reshape((self.nk,3)) #.T
+			self.ifmin = f.read('i').reshape((self.nk, self.ns), order='F')
+			self.ifmax = f.read('i').reshape((self.nk, self.ns), order='F')
+			#same as fortran order
+			self.energies = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
+			#same as fortran order
+			self.occupations = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
 
 	def from_file(self, fname):
 		self.read_header()
@@ -120,11 +126,27 @@ class wfnIO:
 	K-shifts:
 		%s
 	K-pts:
-		%s'''%\
+		%s
+	ifmin:
+		%s
+	ifmax:
+		%s
+	energies:
+		%s
+	occupations:
+		%s
+        k-weights:
+		%s
+	'''%\
 			(self.nk,
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
 			array_str(self.kpt,50,6).replace('\n','\n\t\t'),
+			array_str(self.ifmin.T,50,6).replace('\n','\n\t\t'),
+			array_str(self.ifmax.T,50,6).replace('\n','\n\t\t'),
+			array_str(self.energies.T,50,6).replace('\n','\n\t\t'),
+			array_str(self.occupations.T,50,6).replace('\n','\n\t\t'),
+			array_str(self.kw,50,6).replace('\n','\n\t\t'),
 			)
 		return str
 
@@ -138,5 +160,8 @@ if __name__=='__main__':
 
 	wfn = wfnIO(sys.argv[1])
 	print wfn
-	print
-
+	print 'Sum of the weights:', sum(wfn.kw)
+	#print wfn.ntran
+	#print wfn.nat
+	#print wfn.atyp
+	#print wfn.ngk

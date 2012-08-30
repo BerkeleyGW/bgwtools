@@ -60,21 +60,21 @@ class wfnIO:
 		buf = f.read_record()
 		self.celvol = buf.read('d',1)
 		self.alat = buf.read('d',1)
-		self.avec = buf.read('d',9).reshape((3,3)).T
-		self.adot = buf.read('d',9).reshape((3,3)).T
+		self.avec = buf.read('d',9).reshape((3,3), order='F')
+		self.adot = buf.read('d',9).reshape((3,3), order='F')
 		
 		#READ
 		buf = f.read_record()
 		self.recvol = buf.read('d',1)
 		self.blat = buf.read('d',1)
-		self.bvec = buf.read('d',9).reshape((3,3)).T
-		self.bdot = buf.read('d',9).reshape((3,3)).T
+		self.bvec = buf.read('d',9).reshape((3,3), order='F')
+		self.bdot = buf.read('d',9).reshape((3,3), order='F')
 		
 		#READ
-		self.mtrx = f.read('i').reshape((self.ntran,3,3)).T #symmetry el
+		self.mtrx = f.read('i').reshape((3,3,self.ntran), order='F') #symmetry el
 		
 		#READ
-		self.tnp = f.read('d').reshape((self.ntran,3)).T #frac. translation
+		self.tnp = f.read('d').reshape((3,self.ntran), order='F') #frac. translation
 
 		#READ
 		buf = f.read_record()
@@ -87,13 +87,15 @@ class wfnIO:
 		if self.ftype==1:
 			self.ngk = f.read('i')
 			self.kw = f.read('d')
-			self.kpt = f.read('d').reshape((self.nk,3)) #.T
+			self.kpt = f.read('d').reshape((3, self.nk), order='F')
 			self.ifmin = f.read('i').reshape((self.nk, self.ns), order='F')
 			self.ifmax = f.read('i').reshape((self.nk, self.ns), order='F')
 			#same as fortran order
-			self.energies = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
+			self.energies = f.read('d').reshape((self.nbands, self.nk, self.ns),\
+				order='F')
 			#same as fortran order
-			self.occupations = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
+			self.occupations = f.read('d').reshape((self.nbands, self.nk, self.ns),\
+				order='F')
 
 	def from_file(self, fname):
 		self.read_header()
@@ -116,7 +118,7 @@ class wfnIO:
 		(self.fname, self.name, self.date, self.time, self.ecutrho,
 		array_str(self.bvec,50,6).replace('\n','\n\t\t'),
 		array_str(self.bdot,50,6).replace('\n','\n\t\t'),
-		array_str(self.mtrx,50,6).replace('\n','\n\t\t'),
+		array_str(transpose(self.mtrx,[2,1,0]),50,6).replace('\n','\n\t\t'),
 		)
 		if self.ftype==1:
 			str+='''
@@ -141,7 +143,7 @@ class wfnIO:
 			(self.nk,
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
-			array_str(self.kpt,50,6).replace('\n','\n\t\t'),
+			array_str(self.kpt.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.ifmin.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.ifmax.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.energies.T,50,6).replace('\n','\n\t\t'),

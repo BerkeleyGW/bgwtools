@@ -11,31 +11,36 @@ import sys
 import matplotlib.pyplot as plt
 from optparse import OptionParser
 
+colors=['blue','red','green','yellow']
+
 usage = "usage: %prog [options] file"
 parser = OptionParser(usage)
 parser.add_option('-x',dest='x',default=1,type='int',
 	help='index of the x column in your file. Defaults to x=1')
-parser.add_option('-y',dest='y',default=0,type='int',
+parser.add_option('-y',dest='y',default=-1,type='int',
 	help='index of the y column in your file. Defaults to y=x+1')
-parser.add_option('-z',dest='z',default=0,type='int',
+parser.add_option('-z',dest='z',default=-1,type='int',
 	help='index of the z column in your file. Defaults to z=y+1')
-parser.add_option('-f','--fix',dest='fix',type='choice',choices=['x','y','z'], default='z',
-	help='column that you want to hold fixed (x,y,z). Defaults to the z column')
+parser.add_option('-f','--fix',dest='fix',type='int', default=-1,
+	help='column that you want to hold fixed. Defaults to the third column (3)')
 parser.add_option('-v','--val',dest='val',default=0.0,type='float',
 	help='value that the fixed column must have. Defaults to VAL=0')
 parser.add_option('-p','--print',dest='_print',default=False,action='store_true',
 	help='print the kpts that meet the condition')
 parser.add_option('-c','--cubic',dest='cubic',default=False,action='store_true',
 	help='move the data to the primitive cubic cell')
+parser.add_option('--color-col',dest='color-col',default=0,
+	help='column to you while coloring. Defaults to the last column (-1). '+
+		'Set to zero if you don\'t want colors.')
 
 (opts,args) = parser.parse_args()
 if len(args)!=1:
 	parser.error('incorrect number of arguments')
 
 x,y,z = opts.x,opts.y,opts.z
-if (y<1):
+if (y<0):
 	y=x+1
-if (z<1):
+if (z<0):
 	z=y+1
 col_map={'x':x, 'y':y, 'z':z}
 
@@ -46,7 +51,8 @@ except:
 	print 'Cannot load file',fname
 	raise
 
-fix_col = col_map[opts.fix]-1
+#fix_col = col_map[opts.fix]-1
+fix_col = opts.fix-1
 cond = abs(data_raw[:,fix_col]-opts.val)<TOL_Small
 if not(cond.any()):
 	raise Exception('No value to plot.\nMake sure your condition is'+
@@ -65,6 +71,7 @@ for label in keys:
 
 plot_1 = data[:,col_map[axis[0]]-1]
 plot_2 = data[:,col_map[axis[1]]-1]
+print min(plot_1)
 
 if opts.cubic:
 	plot_1 -= plot_1.round()

@@ -64,12 +64,12 @@ def cast_data(data, prec, ENDIAN='='):
 def cast_array(data, prec, ENDIAN='='):
 	if prec in _int_precisions:
 		num = len(data)/struct.calcsize(prec)
-		return numpy.array(struct.unpack(ENDIAN+str(num)+prec, data))
+		return numpy.array(struct.unpack(ENDIAN+str(num)+prec, data), order='F')
 		
 	elif prec in _float_precisions:
 		num = len(data)/struct.calcsize(prec)
 		numbers = struct.unpack(ENDIAN+str(num)+prec, data)
-		return numpy.array(numbers, dtype=_numpy_precisions[prec])
+		return numpy.array(numbers, dtype=_numpy_precisions[prec], order='F')
 		
 	else:
 		raise ValueError('Not an appropriate precision')

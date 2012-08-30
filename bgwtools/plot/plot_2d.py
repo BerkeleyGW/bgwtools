@@ -35,6 +35,7 @@ if len(args)<1:
 
 def get_data_from_file(fname):
 	data = loadtxt(fname)
+	print data
 	idx = data[:,3]==opts.band
 	data=take(data, [0,1,2,4], axis=1)
 	Band = data[idx,:]

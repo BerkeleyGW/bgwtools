@@ -28,9 +28,11 @@ group_energy = OptionGroup(parser, 'Centering and Middle Energy')
 group_energy.add_option('--has_order', default=False, action='store_true',
 	help='use this flag if the data has an extra column informing the '
 	'coordinate of each point. This flag is off by default.')
-group_energy.add_option('--auto_FE', dest='auto_FE', default=False, action='store_true',
+group_energy.add_option('--auto_FE_bands', default=0, type='int',
 	help='use this flag if you want the script to automatically find the '
-	'Fermi energies. Currently, the algorithm only works for graphene')
+	'Fermi energy. If the value of auto_FE_bands is greater than zero, '
+	'then then Fermi energy will be calculated by counting auto_FE_bands '
+	'bands. For a typical graphene calculation, use 4.')
 group_energy.add_option('--fermi', dest='FEs', type='str', default=None,
 	help='unless you are working with graphene, you might want to enter '
 	'the Fermi energies here as a list of comma-separated values. This way, '
@@ -54,6 +56,8 @@ group_visual.add_option('--cmap_frac', type='float', default=0.7,
 	help='fraction of the cmap to use. Useful if the cmap gets too bright.')
 group_visual.add_option('--linestyles', type='str', default='',
 	help='comma-separated list of line styles. Eg: -,:,;')
+group_visual.add_option('--no_points', action='store_true', default=False,
+	help='don\'t print points')
 parser.add_option_group(group_visual)
 
 parser.add_option('-o',dest='output',type='str',metavar='FILE',
@@ -114,15 +118,16 @@ def plot_file(fname, cnt, fact=1.0):
 	else:
 		X=arange(num_pts)
 
-	if opts.auto_FE:
+	if opts.auto_FE_bands>0:
 		order = argsort(bands[num_pts//2,:]).tolist()
-		idx1 = num_bands//2 - 1
+		idx1 = opts.auto_FE_bands - 1
 		vb = order[idx1]
 		cb = order[idx1+1]
-		if opts.has_order:
-			FE = (bands[27,vb]+bands[27,cb])/2
-		else:
-			FE = (max(bands[:,vb])+min(bands[:,cb]))/2
+		#if opts.has_order:
+		#	FE = (bands[27,vb]+bands[27,cb])/2
+		#else:
+		FE = (min(bands[:,cb]) + max(bands[:,vb]))/2
+		print '  Gap:', min(bands[:,cb]) - max(bands[:,vb])
 	else:
 		order = argsort(bands[0,:]).tolist()
 		if cnt<len(FEs):
@@ -130,7 +135,7 @@ def plot_file(fname, cnt, fact=1.0):
 		else:	
 			FE = None
 	if not (FE is None):
-		print '  Fermi Energy:',FE
+		print '  Fermi Energy:', FE
 		bands[:,:] -= FE
 
 	#c_min = min(bands[bands>0])
@@ -163,6 +168,8 @@ def plot_file(fname, cnt, fact=1.0):
 		if not (color is None):
 			plot_data[0].set_color(color)
 			plot_data[0].set_markerfacecolor(color)
+			if opts.no_points:
+				plot_data[0].set_markersize(0)
 		if not (alpha is None):
 			plot_data[0].set_alpha(color)
 		if not (ls is None):
@@ -185,6 +192,7 @@ F = plt.gcf()
 DPI = F.get_dpi()
 DefaultSize = F.get_size_inches()
 F.set_size_inches( (DefaultSize[0], DefaultSize[1]*0.75) )
+plt.ylabel('Energy (eV)')
 
 #plt.xlim(16,32)
 #plt.ylim(-4,3)

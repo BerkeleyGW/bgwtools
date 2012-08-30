@@ -100,12 +100,10 @@ class wfnIO:
 			self.apos[:,n] = buf.read('d',3)
 			self.atyp[n] = buf.read('i',1)
 
-		if (not full): return
-
 		#only for wfn
 		if self.ftype==1:
 			#READ
-			self.ngk = f.read('i')[0]
+			self.ngk = f.read('i')
 			#READ
 			self.kw = f.read('d')
 			#READ
@@ -122,6 +120,8 @@ class wfnIO:
 			self.occupations = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
 			#READ
 			self.gvec = empty((3,self.ng), order='F', dtype='i')
+
+			if (not full): return
 			self.read_gvectors(self.gvec)
 
 	def write_header(self, full=True):
@@ -188,7 +188,7 @@ class wfnIO:
 			#WRITE
 			f.write_vals('i'*nk, *self.ngk)
 			#WRITE
-			f.write_vals('d'*nk, *self.kw)
+			f.write_vals('d'*nk, *self.kw.ravel('F'))
 			#WRITE
 			f.write_vals('d'*3*nk, *self.kpt.ravel('F'))
 			#WRITE
@@ -247,7 +247,7 @@ class wfnIO:
 
 	def __repr__(self):
 		bool_repr = { False:'False', True:'True' }
-		if self.nat==0: return 'Empty eps_class'
+		if self.nat==0: return '<wfnIO/>'
 		str='''<wfnIO %s>
 	File name: %s
 	Work name: %s
@@ -265,7 +265,8 @@ class wfnIO:
 		common.flavors[self.flavor], self.ecutrho,
 		array_str(self.bvec,50,6).replace('\n','\n\t\t'),
 		array_str(self.bdot,50,6).replace('\n','\n\t\t'),
-		array_str(transpose(self.mtrx,[2,1,0]),50,6).replace('\n','\n\t\t'),
+		#array_str(transpose(self.mtrx,[2,1,0]),50,6).replace('\n','\n\t\t'),
+		array_str(self.mtrx,50,6).replace('\n','\n\t\t'),
 		)
 		if self.ftype==1:
 			str+='''
@@ -276,24 +277,27 @@ class wfnIO:
 		%s
 	K-pts:
 		%s
-	ifmin:
+	Lowest  occ band (ifmin):
 		%s
-	ifmax:
+	Highest occ band (ifmax):
 		%s
-	energies:
+	Energies^T:
 		%s
-	occupations:
+	Occupations^T:
+		%s
+	K-pts weights:
 		%s
 </wfnIO>
 '''%\
 			(self.nk,
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
-			array_str(self.kpt,50,6).replace('\n','\n\t\t'),
+			array_str(self.kpt.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.ifmin.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.ifmax.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.energies.T,50,6).replace('\n','\n\t\t'),
 			array_str(self.occupations.T,50,6).replace('\n','\n\t\t'),
+			array_str(self.kw,50,6).replace('\n','\n\t\t'),
 			)
 		return str
 

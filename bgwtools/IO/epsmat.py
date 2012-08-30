@@ -361,7 +361,7 @@ class epsmatIO:
 
 	def __repr__(self):
 		bool_repr = { False:'False', True:'True' }
-		if self.nq==0: return 'Empty eps_class'
+		if self.nq==0: return '<epsmatIO/>'
 		return '''<epsmatIO %s>
 	File name: %s
 	File date: %s

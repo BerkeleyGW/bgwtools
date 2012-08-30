@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+# An abstract class that reads/writes epsmat files.
+# Handles REAL and COMPLEX data, but only static calculations.
+
+# Felipe Homrich da Jornada <jornada@civet.berkeley.edu> (2012)
+
 from __future__ import division
-
-SAVE=0
-
+from bgwtools.common import common
 import FortranIO
 from numpy import *
 import numpy.core as core
@@ -30,6 +33,7 @@ class epsmatIO:
 		self.ekin = []
 		self.epsmat = []
 		self.q = empty((3,0), dtype=float64)
+		self.flavor=common.flavor.NONE
 
 		if fname and auto_read:
 			self.from_file(self.fname, read_all)
@@ -119,7 +123,84 @@ class epsmatIO:
 		data=[self.ng]+list(self.gvec_k.ravel('F'))
 		f.write_vals(fmt, *data)
 
+	def read_qpt_header(self):
+		#still not used!
+		if not self.f:
+			raise IOError('File not opened')
+		if self.nq==0:
+			raise IOError('Header not initialized')
+		self.cur_q += 1
+		f = self.f
+	
+		#current q-pt index	
+		cnt = len(self.epsmat)
+		
+		#READ
+		buf = f.read_record()
+		buf.read('i',1)
+		#all ng's are the same, so we can discart this value
+		nmtx = buf.read('i',1) #matrix elements, epsi(G,Gp)
+		self.nmtx[cnt] = nmtx #size of eps_inv matrix
+		#at sigma_main and eps_cop neps = max(nmtx)
+
+		tmp = buf.read('i')
+		tmp = tmp.reshape( 2, len(tmp)//2, order='F')
+		self.isort.append( tmp[0,:].copy() )
+		self.isort_i.append( tmp[1,:].copy() )
+		del tmp
+
+		#READ
+		self.ekin.append( f.read('d') )
+		#note: len(ekin[cnt])=ng
+		#ekin is just G*BDOT*Gp (?)
+		#ekin < ecutb = bare_coulomb_cutoff
+
+		#READ
+		self.q[:,cnt] = f.read('d')
+
+	def read_qpt_matrix(self):
+		if not self.f:
+			raise IOError('File not opened')
+		if self.nq==0:
+			raise IOError('Header not initialized')
+		f = self.f
+		
+		#current q-pt index	
+		cnt = len(self.epsmat)
+		nmtx = self.nmtx[cnt] #size of eps_inv matrix
+
+		if self.flavor == common.flavor.NONE:
+			#autodetect flavor
+			#READ
+			tmp = f.read('d')
+			if tmp.shape[0]==2*nmtx:
+				#complex
+				self.flavor = common.flavor.CPLX
+			elif tmp.shape[0]==nmtx:
+				#real
+				self.flavor = common.flavor.REAL
+			else:
+				raise ValueError('Invalid dimension for qpt %d'%(cnt))
+			flavor_str = common.get_numpy_flavor(self.flavor)
+			self.epsmat.append( empty((nmtx, nmtx), order='F', dtype=flavor_str) )
+			tmp=tmp.view(dtype=flavor_str)
+			self.epsmat[-1][:,0] = tmp
+			row_start = 1
+		else:
+			#we know the flavor
+			flavor_str = common.get_numpy_flavor(self.flavor)
+			row_start = 0
+
+		for line in xrange(row_start, nmtx):
+			#READ
+			tmp = f.read('d')
+			self.epsmat[-1][:,line] = tmp.view(dtype=flavor_str)
+
 	def read_qpt(self):
+		self.read_qpt_header()
+		self.read_qpt_matrix()
+
+	def read_qpt_(self):
 		if not self.f:
 			raise IOError('File not opened')
 		if self.nq==0:
@@ -281,50 +362,51 @@ class epsmatIO:
 	def __repr__(self):
 		bool_repr = { False:'False', True:'True' }
 		if self.nq==0: return 'Empty eps_class'
-		return '''eps_class
+		return '''<epsmatIO %s>
 	File name: %s
 	File date: %s
+	Flavor: %s
 	Freq. dependent: %s
 	Num. of freqs.:  %d
 	Monk.-Pack grid: %s
 	W cut-off:       %f
 	Num. of G-vects: %d
-	G-vects^T:
+	G-vects:
 		%s
 	Num. of q-pts:   %d
-	q-pts^T:
+	q-pts:
 		%s
-	Rank of eps matrix per q-pt:
+	Num. of G-vecs per q-pt:
 		%s
 	Bare Coulomb energy:
 		%s
-	q-pts^T read:
-		%s'''%\
-		(self.fname, self.date, bool_repr[self.freq_dep], self.num_freq,
+	q-pts read:
+		%s
+	Matrices heads:
+		%s
+</epsmatIO>
+'''%\
+		(self.fname, self.fname, self.date, common.flavors[self.flavor],
+		bool_repr[self.freq_dep], self.num_freq,
 		self.grid.__str__(), self.ecuts, self.ng,
-		array_str(self.gvec_k.T,50,6).replace('\n','\n\t\t'),
+		array_str(self.gvec_k,50,6).replace('\n','\n\t\t'),
 		self.nq,
-		array_str(self.qpt.T,   50,6).replace('\n','\n\t\t'),
+		array_str(self.qpt,   50,6).replace('\n','\n\t\t'),
 		array_str(self.nmtx,  50,6).replace('\n','\n\t\t'),
 		array_str(array(self.ekin),  50,6).replace('\n','\n\t\t'),
-		array_str(self.q.T,     50,6).replace('\n','\n\t\t'),
+		array_str(self.q,     50,6).replace('\n','\n\t\t'),
+		array_str(\
+			array([self.epsmat[i][0,0] for i in arange(len(self.epsmat))])\
+		 ,50,6).replace('\n','\n\t\t'),
 		) 
 	
 if __name__=='__main__':
 	import sys
 	if len(sys.argv)<2:
-		print 'Expecting one argument: [epsmat/eps0mat file]'
+		print 'Usage: %0 epsmat|eps0mat [...]'%(sys.argv[0])
 		sys.exit()
 
-	epsmat = epsmatIO(sys.argv[1], read_all=True)
-	print epsmat
-	print
-	#print epsmat.epsmat[0][0,1]
-	#print epsmat.epsmat[0][1,0]
-	#for i in xrange(200):
-	#	print epsmat.gvec_k[i]
-
-	if SAVE:
-		epsmat.to_file('/tmp/epsout')
-	#print epsmat.epsmat
+	for fname in sys.argv[1:]:
+		epsmat = epsmatIO(sys.argv[1], read_all=True)
+		print epsmat
 	

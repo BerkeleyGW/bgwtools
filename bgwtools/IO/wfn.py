@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+# An abstract class that reads/writes WFN and RHO files.
+# Handles REAL and COMPLEX data, but not spinors.
+
+# Felipe Homrich da Jornada <jornada@civet.berkeley.edu> (2012)
+
+from __future__ import division
+from bgwtools.common import common
 import FortranIO
 from numpy import *
 
@@ -10,12 +17,13 @@ class wfnIO:
 		self.name=''
 		self.nat=0
 		self.f=None
-		self.ftype=0
+		self.ftype=0 #flavor
 		self.kpt=empty((3,1))
 		self.ifmin=empty((3,3))
 		self.ifmax=empty((3,3))
 		self.energies=empty((3,3))
 		self.occupations=empty((3,3))
+		self.flavor=common.flavor.NONE
 
 		if fname:
 			self.from_file(self.fname, full)
@@ -32,10 +40,8 @@ class wfnIO:
 		self.name=rec[:32]
 		self.date=rec[32:32+32]
 		self.time=rec[32+32:32+32+32]
-		try:
-			self.ftype=self.ftypes.index(self.name[:3])
-		except:
-			self.ftype=0
+		self.ftype=common.get_ftype(self.name[:3], die=True)
+		self.flavor=common.get_flavor(self.name[4:8], die=True)
 
 		#READ
 		buf = f.read_record()
@@ -99,7 +105,7 @@ class wfnIO:
 		#only for wfn
 		if self.ftype==1:
 			#READ
-			self.ngk = f.read('i')
+			self.ngk = f.read('i')[0]
 			#READ
 			self.kw = f.read('d')
 			#READ
@@ -242,11 +248,12 @@ class wfnIO:
 	def __repr__(self):
 		bool_repr = { False:'False', True:'True' }
 		if self.nat==0: return 'Empty eps_class'
-		str='''wfnIO
+		str='''<wfnIO %s>
 	File name: %s
 	Work name: %s
 	Work date: %s
 	Work time: %s
+	Flavor: %s
 	Density cut-off: %f
 	Reciprocal vectors:
 		%s
@@ -254,7 +261,8 @@ class wfnIO:
 		%s
 	Symmetry els:
 		%s'''%\
-		(self.fname, self.name, self.date, self.time, self.ecutrho,
+		(self.fname, self.fname, self.name, self.date, self.time,
+		common.flavors[self.flavor], self.ecutrho,
 		array_str(self.bvec,50,6).replace('\n','\n\t\t'),
 		array_str(self.bdot,50,6).replace('\n','\n\t\t'),
 		array_str(transpose(self.mtrx,[2,1,0]),50,6).replace('\n','\n\t\t'),
@@ -276,7 +284,8 @@ class wfnIO:
 		%s
 	occupations:
 		%s
-	'''%\
+</wfnIO>
+'''%\
 			(self.nk,
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
@@ -288,63 +297,12 @@ class wfnIO:
 			)
 		return str
 
-		
-	
 if __name__=='__main__':
 	import sys
 	if len(sys.argv)<2:
-		print 'Expecting one argument: [RHO file]'
+		print 'Usage: %0 WFN|RHO [...]'%(sys.argv[0])
 		sys.exit()
 
-	#wfn = wfnIO(sys.argv[1], full=False)
-	wfn = wfnIO(sys.argv[1])
-	print wfn.nbands
-
-	#print 'max(ngk)'
-	#print wfn.ngkmax
-	#print 'FFTgridmax'
-	#print wfn.kmax
-	#print '# kpts'
-	#print wfn.nk
-	#print wfn.gvec
-	#print wfn.kmax
-	#print wfn.nbands
-	#print wfn.ngk
-	'''
-	for i in xrange(wfn.nk):
-		print 'kpt=',i,'ngk=',wfn.ngk[i],'G bounds=',
-		gvec0 = empty((3,wfn.ngk[i]), order='F', dtype='i')
-		wfn.read_gvectors(gvec0)
-		print map(max, gvec0), map(min, gvec0)
-		for ib in xrange(wfn.nbands):
-			wfn.read_data()
-	'''
-
-	#print gvec0
-	#savetxt('gvec0', gvec0.T, '%d %d %d')
-	
-	#B = wfn.bdot
-	#L = linalg.cholesky(B)
-	#print B
-	#print L
-	#print dot(L, L.T)
-
-	#print wfn.ifmin
-	#print wfn.ifmax
-	#print wfn.nat
-	#print wfn.apos
-	#print wfn.atyp
-	print wfn
-	#print wfn.avec[:,0]
-
-	#print sum(wfn.occupations)
-	#print sum(wfn.occupations/float(wfn.nk))
-	#print wfn
-	#print wfn.kpt
-	#print wfn.kpt.shape
-	#print wfn.energies.shape #(bands, kpoints, spins)
-	#print ryd*wfn.energies[[3,4],:,0]
-	#print wfn.ntran
-	#print wfn.nat
-	#print wfn.atyp
-	#print wfn.ngk
+	for fname in sys.argv[1:]:
+		wfn = wfnIO(fname, full=False)
+		print wfn

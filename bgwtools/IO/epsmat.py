@@ -9,7 +9,7 @@ from numpy import *
 import numpy.core as core
 
 class epsmatIO:
-	def __init__(self, fname=None, auto_read=True):
+	def __init__(self, fname=None, auto_read=True, read_all=True):
 		self.fname=fname
 		self.f=None
 		self.cur_q=0 #next q_pt to be read
@@ -21,18 +21,18 @@ class epsmatIO:
 		self.grid=array([1,1,1])
 		self.ecuts=0.
 		self.nq=0
-		self.qpt=empty((0,3), dtype=float64)
+		self.qpt=empty((3,0), dtype=float64)
 		self.ng=0
-		self.gvec_k=empty((0,3), dtype=int)
+		self.gvec_k=empty((3,0), dtype=int)
 		self.nmtx=empty(0, dtype=int)
 		self.isort = []
 		self.isort_i = []
 		self.ekin = []
 		self.epsmat = []
-		self.q = empty((0,3), dtype=float64)
+		self.q = empty((3,0), dtype=float64)
 
 		if fname and auto_read:
-			self.from_file(self.fname)
+			self.from_file(self.fname, read_all)
 
 	def read_header(self):
 		if not self.f:
@@ -66,21 +66,21 @@ class epsmatIO:
 		buf = f.read_record()
 		self.nq = buf.read('i',1) #number of q-pts in this file
 		self.qpt = buf.read('d') #q-pts
-		self.qpt = self.qpt.reshape(self.nq, len(self.qpt)//self.nq)
+		self.qpt = self.qpt.reshape((len(self.qpt)//self.nq, self.nq), order='F')
 		#nq is same as nq at sigma_main
 
 		#READ
 		buf = f.read_record()
 		self.ng = buf.read('i',1) #number of g-vects
 		self.gvec_k = buf.read('i') #g-vects
-		self.gvec_k = self.gvec_k.reshape(self.ng, len(self.gvec_k)//self.ng)
+		self.gvec_k = self.gvec_k.reshape((len(self.gvec_k)//self.ng, self.ng), order='F')
 
 		self.nmtx = empty( self.nq, dtype=int )
 		self.isort = []
 		self.isort_i = []
 		self.ekin = []
 		self.epsmat = [] #array of eps matrices
-		self.q = empty( (self.nq,3), dtype=float64 ) #the points
+		self.q = empty( (3, self.nq), order='F', dtype=float64 ) #the points
 
 	def write_header(self):
 		if not self.f:
@@ -97,7 +97,7 @@ class epsmatIO:
 		f.write_vals('i', self.freq_dep, self.num_freq)
 
 		#WRITE
-		f.write_vals('i', *self.grid.flatten())
+		f.write_vals('i', *self.grid.ravel('F'))
 
 		#WRITE
 		f.writeline() #only important if freq dependent
@@ -111,12 +111,12 @@ class epsmatIO:
 
 		#WRITE
 		fmt='i'+'d'*self.qpt.size
-		data=[self.nq]+list(self.qpt.flatten())
+		data=[self.nq]+list(self.qpt.ravel('F'))
 		f.write_vals(fmt, *data)
 
 		#WRITE
 		fmt='i'+'i'*self.gvec_k.size
-		data=[self.ng]+list(self.gvec_k.flatten())
+		data=[self.ng]+list(self.gvec_k.ravel('F'))
 		f.write_vals(fmt, *data)
 
 	def read_qpt(self):
@@ -138,9 +138,9 @@ class epsmatIO:
 		#at sigma_main and eps_cop neps = max(nmtx)
 
 		tmp = buf.read('i')
-		tmp = tmp.reshape(len(tmp)//2, 2)
-		self.isort.append( tmp[:,0].copy() )
-		self.isort_i.append( tmp[:,1].copy() )
+		tmp = tmp.reshape( 2, len(tmp)//2, order='F')
+		self.isort.append( tmp[0,:].copy() )
+		self.isort_i.append( tmp[1,:].copy() )
 		del tmp
 
 		#READ
@@ -150,12 +150,16 @@ class epsmatIO:
 		#ekin < ecutb = bare_coulomb_cutoff
 
 		#READ
-		self.q[cnt,:] = f.read('d')
+		self.q[:,cnt] = f.read('d')
 
-		self.epsmat.append( empty((nmtx, nmtx)) )
+		#self.epsmat.append( empty((nmtx, nmtx), order='F') )
+		self.epsmat.append( empty((nmtx, nmtx), order='F', dtype='complex') )
 		for line in xrange(nmtx):
 			#READ
 			tmp = f.read('d')
+			if tmp.shape[0]==2*nmtx:
+				#complex
+				tmp=tmp.view(dtype='complex')
 			self.epsmat[-1][:,line] = tmp
 
 	def write_qpt(self, cnt):
@@ -185,11 +189,12 @@ class epsmatIO:
 			f.write_vals('d', *self.epsmat[cnt][:,line])
 
 
-	def from_file(self, fname):
+	def from_file(self, fname, read_all=True):
 		self.read_header()
 
-		for n in xrange(self.nq):
-			self.read_qpt()
+		if read_all:
+			for n in xrange(self.nq):
+				self.read_qpt()
 
 	def to_file(self, fname):
 		f_old = self.f
@@ -245,11 +250,15 @@ class epsmatIO:
 		if (qpt<0)or(qpt>=self.nq):
 			raise ValueError('qpt out of range')
 
+		g_idx = []
+		epsinv = []
 		for n in xrange(self.nmtx[qpt]):
 			srt = self.isort[qpt][n]-1
-			G = self.gvec_k[srt, :]
-			print G, self.epsmat[qpt][n, n]
-		print	
+			#G = self.gvec_k[:, srt]
+			#g_idx += [G]
+			g_idx += [srt]
+			epsinv += [self.epsmat[qpt][n, n]]
+		return array(g_idx), array(epsinv)
 
 	def semi_diag(self, qpt=0):
 		if (qpt<0)or(qpt>=self.nq):
@@ -264,7 +273,7 @@ class epsmatIO:
 
 			if srt_i < self.nmtx[qpt]:
 				srt = self.isort[qpt][srt_i]-1
-				G = self.gvec_k[srt, :]
+				G = self.gvec_k[:,srt]
 				print G, self.epsmat[qpt][srt_i, srt_i]
 			else:
 				print array([dx,dy,dz]), 'out of range' 
@@ -280,25 +289,25 @@ class epsmatIO:
 	Monk.-Pack grid: %s
 	W cut-off:       %f
 	Num. of G-vects: %d
-	G-vects:
+	G-vects^T:
 		%s
 	Num. of q-pts:   %d
-	q-pts:
+	q-pts^T:
 		%s
 	Rank of eps matrix per q-pt:
 		%s
 	Bare Coulomb energy:
 		%s
-	q-pts read:
+	q-pts^T read:
 		%s'''%\
 		(self.fname, self.date, bool_repr[self.freq_dep], self.num_freq,
 		self.grid.__str__(), self.ecuts, self.ng,
-		array_str(self.gvec_k,50,6).replace('\n','\n\t\t'),
+		array_str(self.gvec_k.T,50,6).replace('\n','\n\t\t'),
 		self.nq,
-		array_str(self.qpt,   50,6).replace('\n','\n\t\t'),
+		array_str(self.qpt.T,   50,6).replace('\n','\n\t\t'),
 		array_str(self.nmtx,  50,6).replace('\n','\n\t\t'),
 		array_str(array(self.ekin),  50,6).replace('\n','\n\t\t'),
-		array_str(self.q,     50,6).replace('\n','\n\t\t'),
+		array_str(self.q.T,     50,6).replace('\n','\n\t\t'),
 		) 
 	
 if __name__=='__main__':
@@ -307,9 +316,14 @@ if __name__=='__main__':
 		print 'Expecting one argument: [epsmat/eps0mat file]'
 		sys.exit()
 
-	epsmat = epsmatIO(sys.argv[1])
+	epsmat = epsmatIO(sys.argv[1], read_all=True)
 	print epsmat
 	print
+	#print epsmat.epsmat[0][0,1]
+	#print epsmat.epsmat[0][1,0]
+	#for i in xrange(200):
+	#	print epsmat.gvec_k[i]
+
 	if SAVE:
 		epsmat.to_file('/tmp/epsout')
 	#print epsmat.epsmat

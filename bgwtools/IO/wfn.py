@@ -41,7 +41,7 @@ class wfnIO:
 		self.date=rec[32:32+32]
 		self.time=rec[32+32:32+32+32]
 		self.ftype=common.get_ftype(self.name[:3], die=True)
-		self.flavor=common.get_flavor(self.name[4:8], die=True)
+		self.flavor=common.get_flavor(self.name[4:11], die=True)
 
 		#READ
 		buf = f.read_record()
@@ -118,13 +118,13 @@ class wfnIO:
 			#same as fortran order
 			#READ
 			self.occupations = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
-			#READ
-			self.gvec = empty((3,self.ng), order='F', dtype='i')
 
 			if (not full): return
+			self.gvec = empty((3,self.ng), order='F', dtype='i')
+			#READ
 			self.read_gvectors(self.gvec)
 
-	def write_header(self, full=True):
+	def write_header(self, full=False):
 		if not self.f:
 			self.f = FortranIO.FortranFile(self.fname,'=','i','wb')
 		else:		
@@ -143,7 +143,7 @@ class wfnIO:
 			fmt += 'iiid'
 			data += [self.nk, self.nbands, self.ngkmax, self.ecutwfn]
 		f.write_vals(fmt, *data)
-		
+
 		#WRITE
 		fmt = 'iii'
 		data = list(self.kmax.ravel('F'))
@@ -178,8 +178,6 @@ class wfnIO:
 			data += list(self.apos[:,i].ravel('F')) + [self.atyp[i]]
 		f.write_vals(fmt, *data)
 		
-		if (not full): return
-
 		#only for wfn
 		if self.ftype==1:
 			nk = self.nk
@@ -199,8 +197,10 @@ class wfnIO:
 			f.write_vals('d'*nk*ns*nb, *self.energies.ravel('F'))
 			#WRITE
 			f.write_vals('d'*nk*ns*nb, *self.occupations.ravel('F'))
+			if (not full): return
 			#WRITE
 			f.write_vals('i'*3*self.ng, *self.gvec.ravel('F'))
+
 
 	def read_gvectors(self, gvec=None):
 		f = self.f

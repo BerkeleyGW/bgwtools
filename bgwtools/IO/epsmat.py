@@ -175,7 +175,7 @@ class epsmatIO:
 			tmp = f.read('d')
 			if tmp.shape[0]==2*nmtx:
 				#complex
-				self.flavor = common.flavor.CPLX
+				self.flavor = common.flavor.COMPLEX
 			elif tmp.shape[0]==nmtx:
 				#real
 				self.flavor = common.flavor.REAL

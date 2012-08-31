@@ -1,6 +1,6 @@
 
 numpy_flavors=['','double','complex']
-flavors=['NONE','REAL','CPLX']
+flavors=['NONE','REAL','COMPLEX']
 class flavor:
 	NONE=0
 	REAL=1
@@ -8,7 +8,7 @@ class flavor:
 
 def get_flavor(str_, die=True):
 	try:
-		return flavors.index(str_.upper())
+		return flavors.index(str_.upper().strip())
 	except:
 		if not die:
 			return flavor.NONE

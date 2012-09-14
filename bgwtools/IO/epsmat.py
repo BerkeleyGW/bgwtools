@@ -189,6 +189,7 @@ class epsmatIO:
 		else:
 			#we know the flavor
 			flavor_str = common.get_numpy_flavor(self.flavor)
+			self.epsmat.append( empty((nmtx, nmtx), order='F', dtype=flavor_str) )
 			row_start = 0
 
 		for line in xrange(row_start, nmtx):
@@ -199,49 +200,6 @@ class epsmatIO:
 	def read_qpt(self):
 		self.read_qpt_header()
 		self.read_qpt_matrix()
-
-	def read_qpt_(self):
-		if not self.f:
-			raise IOError('File not opened')
-		if self.nq==0:
-			raise IOError('Header not initialized')
-		self.cur_q += 1
-		f = self.f
-		
-		cnt = len(self.epsmat)
-		
-		#READ
-		buf = f.read_record()
-		buf.read('i',1)
-		#all ng's are the same, so we can discart this value
-		nmtx = buf.read('i',1) #matrix elements, epsi(G,Gp)
-		self.nmtx[cnt] = nmtx #size of eps_inv matrix
-		#at sigma_main and eps_cop neps = max(nmtx)
-
-		tmp = buf.read('i')
-		tmp = tmp.reshape( 2, len(tmp)//2, order='F')
-		self.isort.append( tmp[0,:].copy() )
-		self.isort_i.append( tmp[1,:].copy() )
-		del tmp
-
-		#READ
-		self.ekin.append( f.read('d') )
-		#note: len(ekin[cnt])=ng
-		#ekin is just G*BDOT*Gp (?)
-		#ekin < ecutb = bare_coulomb_cutoff
-
-		#READ
-		self.q[:,cnt] = f.read('d')
-
-		#self.epsmat.append( empty((nmtx, nmtx), order='F') )
-		self.epsmat.append( empty((nmtx, nmtx), order='F', dtype='complex') )
-		for line in xrange(nmtx):
-			#READ
-			tmp = f.read('d')
-			if tmp.shape[0]==2*nmtx:
-				#complex
-				tmp=tmp.view(dtype='complex')
-			self.epsmat[-1][:,line] = tmp
 
 	def write_qpt(self, cnt):
 		if not self.f:
@@ -263,7 +221,7 @@ class epsmatIO:
 		f.write_vals('d', *self.ekin[cnt])
 
 		#WRITE
-		f.write_vals('d', *self.q[cnt])
+		f.write_vals('d', *self.q[:,cnt])
 
 		for line in xrange(nmtx):
 			#WRITE

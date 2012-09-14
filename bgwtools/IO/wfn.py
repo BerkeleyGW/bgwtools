@@ -18,6 +18,7 @@ class wfnIO:
 		self.nat=0
 		self.f=None
 		self.ftype=0 #flavor
+		self.gvec=None
 		self.kpt=empty((3,1))
 		self.ifmin=empty((3,3))
 		self.ifmax=empty((3,3))
@@ -199,28 +200,45 @@ class wfnIO:
 			f.write_vals('d'*nk*ns*nb, *self.occupations.ravel('F'))
 			if (not full): return
 			#WRITE
-			f.write_vals('i'*3*self.ng, *self.gvec.ravel('F'))
+			#f.write_vals('i'*3*self.ng, *self.gvec.ravel('F'))
 
 
 	def read_gvectors(self, gvec=None):
 		f = self.f
+		#READ
 		nrecord_internal = f.read('i')
 		ig = 0
 		for i in xrange(nrecord_internal):
+			#READ
 			ng_irecord = f.read('i')
+			#READ
 			buf = f.read('i')
 			if not gvec is None:
 				gvec[:,ig:ig+ng_irecord] = buf.reshape((3,ng_irecord), order='F')
 			del buf
 			ig += ng_irecord
 
+	def write_gvectors(self, gvec=None):
+		f = self.f
+		#WRITE
+		f.write_vals('i', 1)
+		if gvec is None:
+			gvec = self.gvec
+		#WRITE
+		f.write_vals('i', gvec.shape[1])
+		#WRITE
+		f.write_vals('i'*gvec.size, *gvec.ravel('F'))
+
 	def read_data(self, data=None):
 		f = self.f
+		#READ
 		nrecord_internal = f.read('i')
 		ig = 0
 		ns = 1
 		for i in xrange(nrecord_internal):
+			#READ
 			ng_irecord = f.read('i')
+			#READ
 			buf = f.read('d')
 			# do we have complex data?
 			if len(buf) == 2*ng_irecord:
@@ -229,6 +247,19 @@ class wfnIO:
 				data[ig:ig+ng_irecord] = buf.reshape((ng_irecord,ns), order='F')
 			del buf
 			ig += ng_irecord
+	
+	def write_data(self, data):
+		f = self.f
+		#WRITE
+		f.write_vals('i', 1)
+		sz = data.size
+		if self.flavor==common.flavor.COMPLEX:
+			sz //= 2
+		#WRITE
+		f.write_vals('i', sz)
+		#WRITE
+		data_view = data.view(float64)
+		f.write_vals('d'*data_view.size, *data_view)
 
 	def from_file(self, fname, full=True):
 		self.read_header(full)
@@ -309,4 +340,4 @@ if __name__=='__main__':
 
 	for fname in sys.argv[1:]:
 		wfn = wfnIO(fname, full=False)
-		print wfn
+		print wfn.celvol

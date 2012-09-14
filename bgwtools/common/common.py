@@ -4,7 +4,7 @@ flavors=['NONE','REAL','COMPLEX']
 class flavor:
 	NONE=0
 	REAL=1
-	CPLX=2
+	COMPLEX=2
 
 def get_flavor(str_, die=True):
 	try:

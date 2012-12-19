@@ -13,18 +13,22 @@ from numpy import *
 class wfnIO:
 	ftypes=['UNK','WFN','RHO']
 	def __init__(self, fname=None, full=True):
-		self.fname=fname
-		self.name=''
-		self.nat=0
-		self.f=None
-		self.ftype=0 #flavor
-		self.gvec=None
-		self.kpt=empty((3,1))
-		self.ifmin=empty((3,3))
-		self.ifmax=empty((3,3))
-		self.energies=empty((3,3))
-		self.occupations=empty((3,3))
-		self.flavor=common.flavor.NONE
+		self.fname = fname
+		self.name = ''
+		self.nat = 0
+		self.f = None
+		self.ftype = 0 #flavor
+                self.nbands = 0
+                self.ns = 0
+                self.nk = 0
+                self.ng = 0 
+		self.gvec = empty((3,0), order='F')
+		self.kpt = empty((3,0), order='F')
+		self.ifmin = empty((0,0), order='F')
+		self.ifmax = empty((0,0), order='F')
+		self.energies = empty((0,0,0), order='F')
+		self.occupations = empty((0,0,0), order='F')
+		self.flavor = common.flavor.NONE
 
 		if fname:
 			self.from_file(self.fname, full)
@@ -62,7 +66,7 @@ class wfnIO:
 
 		#READ
 		buf = f.read_record()
-		self.kmax = buf.read('i',3)
+		self.FFTgrid = buf.read('i',3)
 		#only for wfn
 		if self.ftype==1:
 			self.kgrid = buf.read('i',3)
@@ -147,7 +151,7 @@ class wfnIO:
 
 		#WRITE
 		fmt = 'iii'
-		data = list(self.kmax.ravel('F'))
+		data = list(self.FFTgrid.ravel('F'))
 		#only for wfn
 		if self.ftype==1:
 			fmt += 'iiiddd'
@@ -200,7 +204,7 @@ class wfnIO:
 			f.write_vals('d'*nk*ns*nb, *self.occupations.ravel('F'))
 			if (not full): return
 			#WRITE
-			#f.write_vals('i'*3*self.ng, *self.gvec.ravel('F'))
+			f.write_vals('i'*3*self.ng, *self.gvec.ravel('F'))
 
 
 	def read_gvectors(self, gvec=None):
@@ -278,7 +282,7 @@ class wfnIO:
 
 	def __repr__(self):
 		bool_repr = { False:'False', True:'True' }
-		if self.nat==0: return '<wfnIO/>'
+		#if self.nat==0: return '<wfnIO/>'
 		str='''<wfnIO %s>
 	File name: %s
 	Work name: %s
@@ -340,4 +344,4 @@ if __name__=='__main__':
 
 	for fname in sys.argv[1:]:
 		wfn = wfnIO(fname, full=False)
-		print wfn.celvol
+		print wfn

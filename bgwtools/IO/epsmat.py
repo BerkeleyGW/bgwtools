@@ -235,15 +235,16 @@ class epsmatIO:
 			for n in xrange(self.nq):
 				self.read_qpt()
 
-	def to_file(self, fname):
+	def to_file(self, fname, write_all=True):
 		f_old = self.f
 		fname_old = self.fname
 		self.fname = fname
 		self.f = None
 
 		self.write_header()
-		for n in xrange(self.nq):
-			self.write_qpt(n)
+                if write_all:
+  	 		for n in xrange(self.nq):
+    		 		self.write_qpt(n)
 
 		self.f.close()
 		self.fname = fname_old

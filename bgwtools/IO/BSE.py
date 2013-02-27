@@ -7,9 +7,15 @@ from FortranIO import FortranFile
 class eigenvectorsIO:
 	def __init__(self, fname=None, auto_read=False):
 		self.fname = fname
-		self.f = FortranFile(self.fname)
-		self.read_header()
+		self.f = None
+		self.nk = 0
 		self.cur_evec = 0
+		self.num_evecs = 0
+
+		if fname:
+			self.f = FortranFile(self.fname)
+			if auto_read:
+				self.read_header()
 
 	def read_header(self):
 		f = self.f
@@ -19,6 +25,9 @@ class eigenvectorsIO:
 		self.nkpt = f.read('i')[0]
 		self.kpts = f.read('d').reshape((3,self.nkpt), order='F')
 		self.neig = self.nspin*self.nvband*self.ncband*self.nkpt
+
+		#self.evals = empty(num_evecs ,dtype='d')
+		#self.evecs = empty((num_evecs,self.num_evecs), dtype='d')
 
 	def next_evec(self):
 		self.f.next(); self.f.next()
@@ -51,8 +60,29 @@ class vmtxelIO:
 	def __init__(self, fname):
 		self.fname = fname
 		self.f = FortranFile(self.fname)
-		self.f.readline()
+		self.read_header()
+
+	def read_header(self):
+		f = self.f
+		buf = f.read('i')
+		self.nkpt = buf[0]
+		self.nc = buf[1]
+		self.nv = buf[2]
+		self.nspin = buf[3]
+		self.opr = buf[4]
 
 	def read_mtxel(self):
 		return self.f.read('d')
-		
+
+	def __repr__(self):
+		opr = ('velocity','momentum')[self.opr]
+		return '''<vmtxelIO %s>
+	File name: %s
+	Num. k-points:   %d
+	Num. cond bands: %d
+	Num. val  bands: %d
+	Num. spins:      %d
+	Operator:        %s
+</vmtxelIO>
+'''%\
+		(self.fname, self.fname, self.nkpt, self.nc, self.nv, self.nspin, opr)

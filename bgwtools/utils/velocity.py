@@ -69,6 +69,52 @@ def get_velocity(wfn, same_order=True, downsample=0):
     else:
         return en, vel
 
+def get_velocity_kp(wfn, same_order=True):
+    if not isinstance(wfn, wfnIO):
+        raise TypeError('Expected wfn type, got %s.'%(type(wfn)))
+    nb = wfn.nbands
+    ns = wfn.ns
+    kpts = wfn.kpt
+    nk = wfn.nk
+    ns = wfn.ns
+    #print en.flags['F_CONTIGUOUS']
+    #print kpts.flags['F_CONTIGUOUS']
+
+    for ik in xrange(len(kpts)):
+        
+
+    # Consistency check: dk == 1/kgrid
+    for idim in range(3):
+        delta_k = all_delta_k[idim]
+        cond = delta_k>0
+        if any(cond):
+            dk[idim] = amin(delta_k[cond])
+    if any(fabs(dk - 1./kgrid) > TOL_SMALL):
+        print wfn.nk
+        print wfn.kgrid
+        print dk
+        print 1./kgrid
+        raise ValueError('kgrid not consistent.')
+    #dk = 1./kgrid
+
+    # It's easier to roll the axis and calculate the velocities if the 
+    # energies are indexed like this:
+    en = en.reshape(nb, kgrid[2], kgrid[1], kgrid[0], ns, order='F')
+
+    # Calcualte band velocity
+    vel = zeros((3, nb, kgrid[2], kgrid[1], kgrid[0], ns), dtype=float, order='F')
+    for idim in range(3):
+        if kgrid[2-idim]<2: continue
+        # In principle we could calculate both the forward and 
+        # backward derivatives...
+        #vel[2-idim] = 0.5*(roll(en, -1, idim+1) - roll(en, 1, idim+1))
+        vel[2-idim] = roll(en, -1, idim+1) - en
+
+    if same_order:
+        return vel.reshape(3, nb, nk, ns, order='F')
+    else:
+        return en, vel
+
 if __name__=='__main__':
     # A simple test, great for graphene, but should work for
     # any system.

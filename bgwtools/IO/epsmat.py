@@ -209,6 +209,7 @@ class epsmatIO:
 		f = self.f
 
 		nmtx = self.nmtx[cnt]		
+		flavor_str = common.get_numpy_flavor(self.flavor)
 
 		#WRITE
 		tmp = column_stack((self.isort[cnt],self.isort_i[cnt]))
@@ -225,7 +226,7 @@ class epsmatIO:
 
 		for line in xrange(nmtx):
 			#WRITE
-			f.write_vals('d', *self.epsmat[cnt][:,line])
+			f.write_vals('d', *self.epsmat[cnt][:,line].view(float64))
 
 
 	def from_file(self, fname, read_all=True):

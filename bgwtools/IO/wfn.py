@@ -204,22 +204,26 @@ class wfnIO:
 			f.write_vals('d'*nk*ns*nb, *self.occupations.ravel('F'))
 			if (not full): return
 			#WRITE
-			f.write_vals('i'*3*self.ng, *self.gvec.ravel('F'))
+			self.write_gvectors(self.gvec)
 
 
 	def read_gvectors(self, gvec=None):
 		f = self.f
 		#READ
-		nrecord_internal = f.read('i')
+		nrecord_internal = f.read('i')[0]
 		ig = 0
 		for i in xrange(nrecord_internal):
 			#READ
-			ng_irecord = f.read('i')
-			#READ
-			buf = f.read('i')
-			if not gvec is None:
+			ng_irecord = f.read('i')[0]
+			if gvec is None:
+                                f.next()
+                        else:
+                                #READ
+                                buf = f.read('i')
 				gvec[:,ig:ig+ng_irecord] = buf.reshape((3,ng_irecord), order='F')
-			del buf
+				del buf
+
+                        
 			ig += ng_irecord
 
 	def write_gvectors(self, gvec=None):
@@ -236,20 +240,23 @@ class wfnIO:
 	def read_data(self, data=None):
 		f = self.f
 		#READ
-		nrecord_internal = f.read('i')
+		nrecord_internal = f.read('i')[0]
 		ig = 0
 		ns = 1
 		for i in xrange(nrecord_internal):
 			#READ
-			ng_irecord = f.read('i')
-			#READ
-			buf = f.read('d')
-			# do we have complex data?
-			if len(buf) == 2*ng_irecord:
+			ng_irecord = f.read('i')[0]
+
+			if data is None:
+                            f.next()
+                        else:
+                            #READ
+                            buf = f.read('d')
+                            # do we have complex data?
+                            if len(buf) == 2*ng_irecord:
 				buf = buf.view(complex128)
-			if not data is None:
-				data[ig:ig+ng_irecord] = buf.reshape((ng_irecord,ns), order='F')
-			del buf
+			    data[ig:ig+ng_irecord] = buf.reshape((ng_irecord,ns), order='F')
+                            del buf
 			ig += ng_irecord
 	
 	def write_data(self, data):

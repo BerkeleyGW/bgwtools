@@ -180,13 +180,20 @@ def plot_file(fname, cnt, fact=1.0):
 	if cnt==0:
 		plt.axhline(0, ls=':', color='black')
 	print 
+	return num_pts
 
-fcnt=0	
+fcnt=0
+max_len = 0
 for fname in args:
-	plot_file(fname, fcnt)
+	max_len = max(plot_file(fname, fcnt), max_len)
 	fcnt+=1
 
 plt.legend()
+if not (opts.ymin is None):
+	plt.ylim(opts.ymin, plt.ylim()[1])
+if not (opts.ymax is None):
+	plt.ylim(plt.ylim()[0], opts.ymax)
+plt.xlim(0, max_len)
 
 F = plt.gcf()
 DPI = F.get_dpi()

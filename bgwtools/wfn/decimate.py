@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 
-# This script reduces the number of k-points in a WFN file
+# This script reduces the number of k-points in a WFN file. It only keeps
+# k-points between the Fermi energy + Edop +/- Edelta, where Edop and Edelta
+# are input parameters.
+# Use this script to generate a decimated WFN_fi file to use with BSE with the
+# patched_sampling option. Then, use decimate_q.py to generate WFNq_fi.
+
+# Felipe Homrich da Jornada (Feb 2013)
 
 from numpy import *
 from bgwtools.IO.wfn import wfnIO
@@ -37,7 +43,9 @@ wfn_out = wfnIO()
 wfn_out.__dict__ = wfn_in.__dict__.copy()
 wfn_out.nk = len(should_keep)
 wfn_out.ngk = wfn_out.ngk[should_keep]
+wfn_out.ngkmax = amax(wfn_out.ngk)
 wfn_out.kw = wfn_out.kw[should_keep]
+wfn_out.kw[:] = 1.0/wfn_out.nk
 wfn_out.kpt = wfn_out.kpt[:, should_keep]
 wfn_out.ifmin = wfn_out.ifmin[should_keep, :]
 wfn_out.ifmax = wfn_out.ifmax[should_keep, :]

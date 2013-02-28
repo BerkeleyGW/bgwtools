@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
-# This script creates a WFN with a reduced number of k-points given a full
-# WFN, a reduced WFN, and a w-shift
+# This script creates a WFNq_fi with a reduced number of k-points given a full
+# WFN_fi, a reduced/decimated WFN_fi, and a q-shift.
+
+# Felipe Homrich da Jornada (Feb 2013)
 
 from numpy import *
 from bgwtools.IO.wfn import wfnIO
@@ -42,7 +44,9 @@ wfn_out = wfnIO()
 wfn_out.__dict__ = wfn_in.__dict__.copy()
 wfn_out.nk = len(should_keep)
 wfn_out.ngk = wfn_out.ngk[should_keep]
+wfn_out.ngkmax = amax(wfn_out.ngk)
 wfn_out.kw = wfn_out.kw[should_keep]
+wfn_out.kw[:] = 1.0/wfn_out.nk
 wfn_out.kpt = wfn_out.kpt[:, should_keep]
 wfn_out.ifmin = wfn_out.ifmin[should_keep, :]
 wfn_out.ifmax = wfn_out.ifmax[should_keep, :]

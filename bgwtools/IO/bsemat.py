@@ -24,18 +24,21 @@ class bsematIO:
             self.kpt[0:3,ik] = buf.read('d',3)
 
     def read_vpcpkp(self, data=None):
-        rec = self.f.read_record()
-        ik,ic,iv = rec.read('i',3)
-        buf = rec.read('d')
         if not data is None:
+            rec = self.f.read_record()
+            ik,ic,iv = rec.read('i',3)
+            buf = rec.read('d')
             if len(buf) == 2*(self.nspin**2*self.nv*self.nc*self.nkpt):
                 data[:] = buf.view(complex128).copy().reshape(
                     (self.nspin, self.nspin, self.nv, self.nc, self.nkpt), order='F')
             else:
                 data[:] = buf.copy().reshape(
                     (self.nspin, self.nspin, self.nv, self.nc, self.nkpt), order='F')
-        del rec,buf
-        return ik,ic,iv
+            del rec,buf
+            return ik,ic,iv
+        else:
+            self.f.next()
+            return 0,0,0
 
     def __repr__(self):
         return '''<bsemat %s>

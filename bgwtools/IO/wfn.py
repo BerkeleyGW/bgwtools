@@ -29,6 +29,8 @@ class wfnIO:
 		self.energies = empty((0,0,0), order='F')
 		self.occupations = empty((0,0,0), order='F')
 		self.flavor = common.flavor.NONE
+                self.ns = 0
+                self.nspinor = 0
 
 		if fname:
 			self.from_file(self.fname, full)
@@ -52,6 +54,10 @@ class wfnIO:
 		buf = f.read_record()
 
 		self.ns = buf.read('i',1)
+                self.nspinor = 1
+                if (self.ns==4):
+                    self.ns = 1
+                    self.nspinor = 2
 		self.ng = buf.read('i',1)
 		self.ntran = buf.read('i',1)
 		self.cell_symmetry = buf.read('i',1)
@@ -242,10 +248,10 @@ class wfnIO:
 		#READ
 		nrecord_internal = f.read('i')[0]
 		ig = 0
-		ns = 1
+		ns = self.ns
 		for i in xrange(nrecord_internal):
 			#READ
-			ng_irecord = f.read('i')[0]
+			ng_irecord = f.read('i')[0] * self.nspinor
 
 			if data is None:
                             f.next()

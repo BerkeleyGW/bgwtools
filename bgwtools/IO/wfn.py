@@ -258,8 +258,7 @@ class wfnIO:
                         else:
                             #READ
                             buf = f.read('d')
-                            # do we have complex data?
-                            if len(buf) == 2*ng_irecord:
+                            if self.flavor==common.flavor.COMPLEX:
 				buf = buf.view(complex128)
 			    data[ig:ig+ng_irecord] = buf.reshape((ng_irecord,ns), order='F')
                             del buf
@@ -270,7 +269,7 @@ class wfnIO:
 		#WRITE
 		f.write_vals('i', 1)
 		sz = data.size
-		if self.flavor==common.flavor.COMPLEX:
+		if self.flavor==common.flavor.COMPLEX and data.dtype=='d':
 			sz //= 2
 		#WRITE
 		f.write_vals('i', sz)

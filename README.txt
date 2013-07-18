@@ -10,11 +10,16 @@ This python package provides a set of abstraction classes and tools to
 INSTALL
 -------
 
-Add the following line to your ~/.bashrc or ~/.zshrc:
-export PYTHONPATH=${PYTHONPATH}:$HOME/bgw-tools
+1) Extract this repository to a directory DIR. If you wish to clone the
+   repository (recommended), do something like:
 
-where $HOME/bgw-tools is the location where this directory.
+   $ cd ~/
+   $ git clone https://user@bitbucket.org/jornada/berkeleygw-tools.git bgw-tools
 
+   where user is your bitbucket username. In this example, DIR=$HOME/bgw-tools
+
+2) Add the following line to your ~/.bashrc or ~/.zshrc:
+   export PYTHONPATH=${PYTHONPATH}:DIR
 
 TEST
 ----
@@ -28,6 +33,6 @@ To test the installation, follow these steps:
 from bgwtools.IO.wfn import wfnIO
 wfn = wfnIO('WFN')
 print wfn
-
-5) Have fun :-)
+5) If you don't see some neat stuff, see step (2) of the INSTALL part.
+6) Happy BerkeleyGW hacking :-)
 

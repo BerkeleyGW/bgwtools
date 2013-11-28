@@ -91,9 +91,10 @@ class EpsmatModeler:
             return 8.*np.pi/(qlen**2 + G2)
         
 
-    def model(self, model=0, smooth=0.0):
+    def model(self, model=0, smooth=0.0, degree=3):
         import matplotlib.pyplot as plt
         cm = plt.cm.jet
+        self.degree = degree
 
         if model==0:
             ys = self.eps
@@ -106,6 +107,8 @@ class EpsmatModeler:
             chi = (self.eps - 1.0)/vT
             ys = chi
             ys[self.Gzs%2==0,:] /= self.qlens
+
+        self.tcks = []
 
         #for ig, Gz in zip([self.Gz_max], [0]):
         for ig, Gz in zip(np.arange(self.nG), self.Gzs):
@@ -125,7 +128,8 @@ class EpsmatModeler:
                 s=0
             else:
                 s=len(x)*smooth
-            tck = splrep(x, y, s=s)
+            tck = splrep(x, y, k=self.degree, s=s)
+            self.tcks.append(tck)
             x_intp = np.linspace(0, np.amax(x), 10000) + 1e-12
             y_intp = splev(x_intp, tck)
 
@@ -156,7 +160,19 @@ class EpsmatModeler:
         plt.show()
     
     def get_bgw_params(self):
-        print self.Gzs
+        print 'Splines Data (n,t,c,k):'
+        print self.nG, self.avgcut_xy
+        for ig, Gz in zip(np.arange(self.nG), self.Gzs):
+            print Gz
+            tck = self.tcks[ig]
+            print len(tck[0]) #n -- number of knots
+            for i in range(len(tck[0])):
+                    print tck[0][i], #t -- pos of knots
+            print
+            for i in range(len(tck[1])):
+                    print tck[1][i], #c -- bsplines coeffs
+            print
+            print self.degree #k -- degree
 
 if __name__=="__main__":
     from bgwtools.IO.wfn import wfnIO
@@ -173,7 +189,7 @@ if __name__=="__main__":
     parser.add_option("--avgcut_xy", default=0.0, type="float",
                       help="""keep q-points up |q|^2<=|avgcut_xy|.
                       If 0.0, keep all q-points.""")
-    parser.add_option("-k", default=3, type="int",
+    parser.add_option("-k", "--degree", default=3, type="int",
                       help="order of the spline polynomial.")
     parser.add_option("-d", "--dump", default='model.pck', metavar="FILE", type="str",
                       help="dumps model to FILE.")
@@ -201,7 +217,8 @@ if __name__=="__main__":
             epsmat_modeler.add_epsmat(epsmat)
         epsmat_modeler.commit_data()
 
-    epsmat_modeler.model(model=options.model, smooth=options.smooth)
+    epsmat_modeler.model(model=options.model, smooth=options.smooth, degree=options.degree)
+    epsmat_modeler.get_bgw_params()
     if len(args)>1:
         print "Dumping model to file '%s'"%(options.dump)
         f = open(options.dump, 'wb')

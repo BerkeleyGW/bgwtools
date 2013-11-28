@@ -97,11 +97,15 @@ class EpsmatModeler:
 
         if model==0:
             ys = self.eps
+        elif model==1:
+            vT = self.get_vcoul(self.qlens, self.Gzs)
+            chi = (self.eps - 1.0)/vT
+            ys = chi
         else:
             vT = self.get_vcoul(self.qlens, self.Gzs)
             chi = (self.eps - 1.0)/vT
-            #ys = np.array(chi, dtype='float')
             ys = chi
+            ys[self.Gzs%2==0,:] /= self.qlens
 
         #for ig, Gz in zip([self.Gz_max], [0]):
         for ig, Gz in zip(np.arange(self.nG), self.Gzs):
@@ -109,19 +113,15 @@ class EpsmatModeler:
             x = self.qlens
             y = ys[ig]
 
-            if (Gz==0):
+            if (Gz%2==0 and model==1):
                 # Let's force epsinv(0) = 1 => chi(0) = 0
                 x = np.append(0, self.qlens)
                 y = np.append(0, y)
-                #x = np.append(0, np.append(self.qlens[0], np.append(self.qlens[0]*2, self.qlens[1:])))
-                #y = np.append(0, np.append(y[0], np.append(y[0]*4, y[1:])))
-                #x = np.append(0, np.append(self.qlens[0], np.append(self.qlens[0]*2, self.qlens[1:])))
-                #y = np.append(0, np.append(y[0], np.append(y[0]*4, y[1:])))
 
             #For Gz>=2, we use a smoothing spline interpolation (i.e., s>0)
             #This would not be necessary if Ms. Qiu calculated all epsmat files
             #with the same cutoff ;)
-            if np.fabs(Gz)<1:
+            if Gz==0:
                 s=0
             else:
                 s=len(x)*smooth
@@ -129,9 +129,15 @@ class EpsmatModeler:
             x_intp = np.linspace(0, np.amax(x), 10000) + 1e-12
             y_intp = splev(x_intp, tck)
 
-            if model>0:
+            if model==1:
                 vT_intp = self.get_vcoul(x_intp, Gz)
                 y_intp = 1.0 + vT_intp*y_intp
+            elif model==2:
+                vT_intp = self.get_vcoul(x_intp, Gz)
+                if (Gz%2==0):
+                    y_intp = 1.0 + vT_intp*y_intp*(x_intp)
+                else:
+                    y_intp = 1.0 + vT_intp*y_intp
 
             if Gz<0: continue # only need to plot the second part
 
@@ -146,6 +152,7 @@ class EpsmatModeler:
         plt.legend(prop={'size':14})
         plt.xlabel('$|q|$', size=18)
         plt.ylabel(r'$\varepsilon^{-1}$', size=18)
+        plt.ylim(0, 1)
         plt.show()
     
     def get_bgw_params(self):
@@ -173,6 +180,8 @@ if __name__=="__main__":
     parser.add_option("-s", "--smooth", default=0.0, type="float",
                       help="""use a non-zero value to perform a smoothing
                               spline interpolation.""")
+    parser.add_option("-m", "--model", default=1, type="int",
+                      help="which model to use (0-2).")
     (options, args) = parser.parse_args()
 
     if len(args)<1:
@@ -192,7 +201,7 @@ if __name__=="__main__":
             epsmat_modeler.add_epsmat(epsmat)
         epsmat_modeler.commit_data()
 
-    epsmat_modeler.model(model=1, smooth=options.smooth)
+    epsmat_modeler.model(model=options.model, smooth=options.smooth)
     if len(args)>1:
         print "Dumping model to file '%s'"%(options.dump)
         f = open(options.dump, 'wb')

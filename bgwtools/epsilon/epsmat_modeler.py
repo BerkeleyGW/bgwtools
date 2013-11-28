@@ -44,7 +44,7 @@ class EpsmatModeler:
 
         for iq in range(epsmat.nq):
             qq = epsmat.qpt[:,iq]
-            qq = _min_range_abs(qq)
+            #qq = _min_range_abs(qq)
             qlen = np.sqrt(np.sum(np.dot(self.M, qq)**2))
             print '(%d/%d) |q| = %.08f Bohr^-1'%(iq+1, epsmat.nq, qlen),
             if qlen>self.avgcut_xy:
@@ -91,8 +91,9 @@ class EpsmatModeler:
             return 8.*np.pi/(qlen**2 + G2)
         
 
-    def model(self, model=0):
+    def model(self, model=0, smooth=0.0):
         import matplotlib.pyplot as plt
+        cm = plt.cm.jet
 
         if model==0:
             ys = self.eps
@@ -123,7 +124,7 @@ class EpsmatModeler:
             if np.fabs(Gz)<1:
                 s=0
             else:
-                s=len(x)
+                s=len(x)*smooth
             tck = splrep(x, y, s=s)
             x_intp = np.linspace(0, np.amax(x), 10000) + 1e-12
             y_intp = splev(x_intp, tck)
@@ -134,11 +135,14 @@ class EpsmatModeler:
 
             if Gz<0: continue # only need to plot the second part
 
-            #lines = plt.plot(self.qlens, self.eps[ig], 'o')
-            #lines = plt.plot(x, y, 'o')
-            #color = lines[0].get_color()
-            #plt.plot(x_intp, y_intp, '-', lw=2, color=color, label='Gz=%d'%(Gz))
-            plt.plot(x_intp, y_intp, '-', lw=2, label='Gz=%d'%(Gz))
+            ls = ('-','--')[Gz%2]
+            lines = plt.plot(x_intp, y_intp, ls, lw=2, label='Gz=%d'%(Gz))
+            if not cm is None:
+                lines[0].set_color(cm(float(Gz)/self.Gzs[-1]))
+            color = lines[0].get_color()
+            marker = ('o','s')[Gz%2]
+            plt.plot(self.qlens, self.eps[ig], marker, color=color)
+
         plt.legend(prop={'size':14})
         plt.xlabel('$|q|$', size=18)
         plt.ylabel(r'$\varepsilon^{-1}$', size=18)
@@ -159,13 +163,16 @@ if __name__=="__main__":
     parser = OptionParser(usage)
     parser.add_option("--Gz_max", default=0, type="int",
                       help="keep G vectors up to Gz<=|Gz_max|")
-    parser.add_option("--avgcut_xy", default=0.0, type="float", 
+    parser.add_option("--avgcut_xy", default=0.0, type="float",
                       help="""keep q-points up |q|^2<=|avgcut_xy|.
                       If 0.0, keep all q-points.""")
-    parser.add_option("-k", default=3, type="int", 
+    parser.add_option("-k", default=3, type="int",
                       help="order of the spline polynomial.")
-    parser.add_option("-d", "--dump", default='model.pck', metavar="FILE", type="str", 
+    parser.add_option("-d", "--dump", default='model.pck', metavar="FILE", type="str",
                       help="dumps model to FILE.")
+    parser.add_option("-s", "--smooth", default=0.0, type="float",
+                      help="""use a non-zero value to perform a smoothing
+                              spline interpolation.""")
     (options, args) = parser.parse_args()
 
     if len(args)<1:
@@ -185,7 +192,7 @@ if __name__=="__main__":
             epsmat_modeler.add_epsmat(epsmat)
         epsmat_modeler.commit_data()
 
-    epsmat_modeler.model(model=1)
+    epsmat_modeler.model(model=1, smooth=options.smooth)
     if len(args)>1:
         print "Dumping model to file '%s'"%(options.dump)
         f = open(options.dump, 'wb')

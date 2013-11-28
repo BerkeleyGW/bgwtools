@@ -11,6 +11,11 @@ import numpy as np
 from scipy.spatial import cKDTree
 from scipy.interpolate import splrep, splev
 
+# Not exactly the BZ, but good enough
+def _min_range_abs(x):
+    '''Moves vector x to the [-0.5, 0.5) range, and apply abs().'''
+    return np.fabs(x - np.floor(x + 0.5))
+
 class EpsmatModeler:
     def __init__(self, wfn, Gz_max, avgcut_xy):
         self.bdot = wfn.bdot.copy()
@@ -39,6 +44,7 @@ class EpsmatModeler:
 
         for iq in range(epsmat.nq):
             qq = epsmat.qpt[:,iq]
+            qq = _min_range_abs(qq)
             qlen = np.sqrt(np.sum(np.dot(self.M, qq)**2))
             print '(%d/%d) |q| = %.08f Bohr^-1'%(iq+1, epsmat.nq, qlen),
             if qlen>self.avgcut_xy:
@@ -123,10 +129,10 @@ class EpsmatModeler:
             y_intp = splev(x_intp, tck)
 
             if model>0:
-                vT_intp = self.get_vcoul(x_intp, Gz, trunc=False)
+                vT_intp = self.get_vcoul(x_intp, Gz)
                 y_intp = 1.0 + vT_intp*y_intp
 
-            if Gz<0: continue
+            if Gz<0: continue # only need to plot the second part
 
             #lines = plt.plot(self.qlens, self.eps[ig], 'o')
             #lines = plt.plot(x, y, 'o')
@@ -144,39 +150,44 @@ class EpsmatModeler:
 if __name__=="__main__":
     from bgwtools.IO.wfn import wfnIO
     from bgwtools.IO.epsmat import epsmatIO
+    import cPickle
 
     from optparse import OptionParser
-    usage = "usage: %prog [options] wfn epsmat1 [epsmat2 ...]"
+    usage = ("\n" +
+             "(1) %prog [options] wfn epsmat1 [epsmat2 ...]\n" + 
+             "(2) %prog model.pck")
     parser = OptionParser(usage)
     parser.add_option("--Gz_max", default=0, type="int",
                       help="keep G vectors up to Gz<=|Gz_max|")
-    parser.add_option("--avgcut_xy", default=0.0, type="float",
+    parser.add_option("--avgcut_xy", default=0.0, type="float", 
                       help="""keep q-points up |q|^2<=|avgcut_xy|.
                       If 0.0, keep all q-points.""")
-    parser.add_option("-k", default=3, type="int",
-                      help="""order of the spline polynomial.""")
+    parser.add_option("-k", default=3, type="int", 
+                      help="order of the spline polynomial.")
+    parser.add_option("-d", "--dump", default='model.pck', metavar="FILE", type="str", 
+                      help="dumps model to FILE.")
     (options, args) = parser.parse_args()
 
-    if len(args)<2:
-        parser.error("incorrect number of arguments")
-
-    wfn = wfnIO(args[0])
-    epsmat_modeler = EpsmatModeler(wfn, options.Gz_max, options.avgcut_xy)
-    try:
-        # Try read data from cache
-        data = np.load('epsmat_modeler.npz')
-        epsmat_modeler.qs = data['qs']
-        epsmat_modeler.qlens = data['qlens']
-        epsmat_modeler.eps = data['eps']
-        del data
-        print 'Read data from cache'
-    except:
-        # If there's no cache, read binary files
+    if len(args)<1:
+        parser.error('Insuficient number of arguments.')
+    elif len(args)==1:
+        print "Reading model from file '%s'"%(args[0])
+        f = open(args[0], 'rb')
+        epsmat_modeler = cPickle.load(f)
+        f.close()
+    else:
+        print "Parsing wfn file '%s'"%(args[0])
+        wfn = wfnIO(args[0])
+        epsmat_modeler = EpsmatModeler(wfn, options.Gz_max, options.avgcut_xy)
         for arg in args[1:]:
+            print "Parsing epsmat file '%s'"%(arg)
             epsmat = epsmatIO(arg, read_all=False)
             epsmat_modeler.add_epsmat(epsmat)
         epsmat_modeler.commit_data()
+
     epsmat_modeler.model(model=1)
-    np.savez('epsmat_modeler.npz', qs=epsmat_modeler.qs, 
-        qlens=epsmat_modeler.qlens, eps=epsmat_modeler.eps)
-    print epsmat_modeler
+    if len(args)>1:
+        print "Dumping model to file '%s'"%(options.dump)
+        f = open(options.dump, 'wb')
+        cPickle.dump(epsmat_modeler, f)
+        f.close()

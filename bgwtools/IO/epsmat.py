@@ -15,7 +15,7 @@ class epsmatIO:
 	def __init__(self, fname=None, auto_read=True, read_all=True):
 		self.fname=fname
 		self.f=None
-		self.cur_q=0 #next q_pt to be read
+		self.cur_q=-1 #index of current q_pt (0-based)
 
 		self.name=''
 		self.date=''
@@ -132,15 +132,12 @@ class epsmatIO:
 		self.cur_q += 1
 		f = self.f
 	
-		#current q-pt index	
-		cnt = len(self.epsmat)
-		
 		#READ
 		buf = f.read_record()
 		buf.read('i',1)
 		#all ng's are the same, so we can discart this value
 		nmtx = buf.read('i',1) #matrix elements, epsi(G,Gp)
-		self.nmtx[cnt] = nmtx #size of eps_inv matrix
+		self.nmtx[self.cur_q] = nmtx #size of eps_inv matrix
 		#at sigma_main and eps_cop neps = max(nmtx)
 
 		tmp = buf.read('i')
@@ -151,23 +148,27 @@ class epsmatIO:
 
 		#READ
 		self.ekin.append( f.read('d') )
-		#note: len(ekin[cnt])=ng
+		#note: len(ekin[self.cur_q])=ng
 		#ekin is just G*BDOT*Gp (?)
 		#ekin < ecutb = bare_coulomb_cutoff
 
 		#READ
-		self.q[:,cnt] = f.read('d')
+		self.q[:,self.cur_q] = f.read('d')
 
-	def read_qpt_matrix(self):
+	def read_qpt_matrix(self, in_place=True, ignore=False):
 		if not self.f:
 			raise IOError('File not opened')
 		if self.nq==0:
 			raise IOError('Header not initialized')
 		f = self.f
 		
-		#current q-pt index	
-		cnt = len(self.epsmat)
-		nmtx = self.nmtx[cnt] #size of eps_inv matrix
+		#current q-pt index
+		nmtx = self.nmtx[self.cur_q] #size of eps_inv matrix
+
+                if ignore:
+		    for line in xrange(nmtx):
+                        f.next()
+                    return None
 
 		if self.flavor == common.flavor.NONE:
 			#autodetect flavor
@@ -180,26 +181,30 @@ class epsmatIO:
 				#real
 				self.flavor = common.flavor.REAL
 			else:
-				raise ValueError('Invalid dimension for qpt %d'%(cnt))
+				raise ValueError('Invalid dimension for qpt %d'%(self.cur_q))
 			flavor_str = common.get_numpy_flavor(self.flavor)
-			self.epsmat.append( empty((nmtx, nmtx), order='F', dtype=flavor_str) )
-			tmp=tmp.view(dtype=flavor_str)
-			self.epsmat[-1][:,0] = tmp
+                        buf = empty((nmtx, nmtx), order='F', dtype=flavor_str)
+			tmp = tmp.view(dtype=flavor_str)
+			buf[:,0] = tmp
 			row_start = 1
 		else:
 			#we know the flavor
 			flavor_str = common.get_numpy_flavor(self.flavor)
-			self.epsmat.append( empty((nmtx, nmtx), order='F', dtype=flavor_str) )
+			buf = empty((nmtx, nmtx), order='F', dtype=flavor_str)
 			row_start = 0
 
 		for line in xrange(row_start, nmtx):
 			#READ
 			tmp = f.read('d')
-			self.epsmat[-1][:,line] = tmp.view(dtype=flavor_str)
+			buf[:,line] = tmp.view(dtype=flavor_str)
+                if in_place:
+                    self.epsmat.append(buf)
+                else:
+                    return buf
 
-	def read_qpt(self):
+	def read_qpt(self, in_place=True, ignore=False):
 		self.read_qpt_header()
-		self.read_qpt_matrix()
+		return self.read_qpt_matrix(in_place, ignore)
 
 	def write_qpt(self, cnt):
 		if not self.f:
@@ -367,6 +372,6 @@ if __name__=='__main__':
 		sys.exit()
 
 	for fname in sys.argv[1:]:
-		epsmat = epsmatIO(sys.argv[1], read_all=True)
+		epsmat = epsmatIO(sys.argv[1], read_all=False)
 		print epsmat
 	

@@ -107,6 +107,8 @@ class FortranRecord(object):
 
 		if num==1:
 			return cast_data(data, prec, self.ENDIAN)
+                if prec==None:
+                        return data
 		return cast_array(data, prec, self.ENDIAN)		
 
 

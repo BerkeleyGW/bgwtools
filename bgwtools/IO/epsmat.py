@@ -8,6 +8,7 @@
 from __future__ import division
 from bgwtools.common import common
 import FortranIO
+import numpy as np
 from numpy import *
 import numpy.core as core
 
@@ -57,11 +58,18 @@ class epsmatIO:
         self.grid = f.read('i') #k-grid (3)
 
         #READ
-        f.read() #only important if freq dependent
+        if self.freq_dep==2:
+            tmp = f.read('d')
+            assert(len(tmp)==2*self.num_freq)
+            self.freq_grid = np.array(tmp[:self.num_freq])
+            self.freq_broad = np.array(tmp[self.num_freq:])
+        else:
+            f.read()
+
         #READ
-        f.read() #??
+        f.read() #Empty by GSM
         #READ
-        f.read() #??
+        f.read() #Empty by GSM
 
         #READ
         self.ecuts = f.read('d')[0] #maximum energy, or gmax_in

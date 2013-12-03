@@ -60,9 +60,9 @@ class epsmatIO:
         #READ
         if self.freq_dep==2:
             tmp = f.read('d')
-            assert(len(tmp)==2*self.num_freq)
+            assert(len(tmp)==3*self.num_freq)
             self.freq_grid = np.array(tmp[:self.num_freq])
-            self.freq_broad = np.array(tmp[self.num_freq:])
+            self.freq_broad = np.array(tmp[self.num_freq:]).view(np.complex128)
         else:
             f.read()
 
@@ -112,11 +112,15 @@ class epsmatIO:
         f.write_vals('i', *self.grid.ravel('F'))
 
         #WRITE
-        f.writeline() #only important if freq dependent
+        if self.freq_dep==2:
+            f.write_vals('d', *np.hstack((self.freq_grid, self.freq_broad.view(np.float64))))
+        else:
+            f.writeline()
+
         #WRITE
-        f.writeline() #??
+        f.writeline() #Empty by GSM
         #WRITE
-        f.writeline() #??
+        f.writeline() #Empty by GSM
 
         #WRITE
         f.write_vals('d',self.ecuts) #maximum energy, or gmax_in

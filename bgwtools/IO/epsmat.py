@@ -13,7 +13,7 @@ from numpy import *
 import numpy.core as core
 
 class epsmatIO:
-    def __init__(self, fname=None, auto_read=True, read_all=True):
+    def __init__(self, fname=None, auto_read=True, read_all=True, flavor=common.flavor.NONE):
         self.fname=fname
         self.f=None
         self.cur_q=-1 #index of current q_pt (0-based)
@@ -34,7 +34,7 @@ class epsmatIO:
         self.ekin = []
         self.epsmat = []
         self.q = empty((3,0), dtype=float64)
-        self.flavor=common.flavor.NONE
+        self.flavor = flavor
 
         if fname and auto_read:
             self.from_file(self.fname, read_all)
@@ -167,16 +167,14 @@ class epsmatIO:
         #READ
         self.q[:,self.cur_q] = f.read('d')
 
-    def read_qpt_matrix(self, in_place=True, ignore=False):
+    def _read_qpt_matrix_static(self, in_place=True, ignore=False):
         if not self.f:
             raise IOError('File not opened')
         if self.nq==0:
             raise IOError('Header not initialized')
         f = self.f
 
-        #current q-pt index
         nmtx = self.nmtx[self.cur_q] #size of eps_inv matrix
-
         if ignore:
             for line in xrange(nmtx):
                 f.next()
@@ -186,10 +184,11 @@ class epsmatIO:
             #autodetect flavor
             #READ
             tmp = f.read('d')
-            if tmp.shape[0]==2*nmtx:
+            nmat = len(tmp)
+            if tmp.shape[0]==2*nmtx*self.num_freq:
                 #complex
                 self.flavor = common.flavor.COMPLEX
-            elif tmp.shape[0]==nmtx:
+            elif tmp.shape[0]==nmtx*self.num_freq:
                 #real
                 self.flavor = common.flavor.REAL
             else:
@@ -213,6 +212,51 @@ class epsmatIO:
             self.epsmat.append(buf)
         else:
             return buf
+
+    def _read_qpt_matrix_ff(self, in_place=True, ignore=False):
+        if not self.f:
+            raise IOError('File not opened')
+        if self.nq==0:
+            raise IOError('Header not initialized')
+        f = self.f
+
+        nmtx = self.nmtx[self.cur_q] #size of eps_inv matrix
+        if ignore:
+            for line in xrange(nmtx**2):
+                f.next()
+            return None
+
+        if self.flavor == common.flavor.NONE:
+            raise ValueError('Cannot automatically identify flavor in ff epsmat files.')
+
+        #we know the flavor
+        flavor_str = common.get_numpy_flavor(self.flavor)
+        buf = []
+        buf.append(empty((self.num_freq, nmtx, nmtx), order='F', dtype=np.complex128))
+        if self.flavor == common.flavor.COMPLEX:
+            buf.append(empty((self.num_freq, nmtx, nmtx), order='F', dtype=np.complex128))
+
+        for line_ in xrange(nmtx):
+            for line in xrange(nmtx):
+                #READ
+                tmp = f.read('d')
+                buf[0][:,line, line_] = tmp.view(np.complex128)
+            if self.flavor==common.flavor.COMPLEX:
+                for line in xrange(nmtx):
+                    #READ
+                    tmp = f.read('d')
+                    buf[1][:,line, line_] = tmp.view(np.complex128)
+
+        if in_place:
+            self.epsmat.append(buf)
+        else:
+            return buf
+
+    def read_qpt_matrix(self, in_place=True, ignore=False):
+        if self.freq_dep==0:
+            return self._read_qpt_matrix_static(in_place, ignore)
+        else:
+            return self._read_qpt_matrix_ff(in_place, ignore)
 
     def read_qpt(self, in_place=True, ignore=False):
         self.read_qpt_header()
@@ -244,7 +288,6 @@ class epsmatIO:
         for line in xrange(nmtx):
             #WRITE
             f.write_vals('d', *self.epsmat[cnt][:,line].view(float64))
-
 
     def from_file(self, fname, read_all=True):
         self.read_header()
@@ -304,7 +347,7 @@ class epsmatIO:
         self.ekin.pop(index)
         self.epsmat.pop(index)
 
-    def get_diag(self, qpt=0):
+    def get_diag(self, qpt=0, iw=0):
         if (qpt<0)or(qpt>=self.nq):
             raise ValueError('qpt out of range')
 
@@ -315,7 +358,10 @@ class epsmatIO:
             #G = self.gvec_k[:, srt]
             #g_idx += [G]
             g_idx += [srt]
-            epsinv += [self.epsmat[qpt][n, n]]
+            if self.freq_dep==0:
+                epsinv += [self.epsmat[qpt][n, n]]
+            else:
+                epsinv += [self.epsmat[qpt][0][iw, n, n]]
         return array(g_idx), array(epsinv)
 
     def semi_diag(self, qpt=0):

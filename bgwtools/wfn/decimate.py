@@ -24,7 +24,7 @@ Edelta = float(sys.argv[2])/ryd
 fname_in = sys.argv[3]
 fname_out = sys.argv[4]
 
-wfn_in = wfnIO(fname_in)
+wfn_in = wfnIO(fname_in, full=True)
 FE = -inf
 for jk in range(wfn_in.nk):
     for js in range(wfn_in.ns):

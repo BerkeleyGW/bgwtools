@@ -241,7 +241,8 @@ class wfnIO:
 		#WRITE
 		f.write_vals('i', gvec.shape[1])
 		#WRITE
-		f.write_vals('i'*gvec.size, *gvec.ravel('F'))
+		#f.write_vals2('i', gvec.ravel('F'))
+		f.write_vals('i'*len(gvec.ravel()), *gvec.ravel('F'))
 
 	def read_data(self, data=None):
 		f = self.f
@@ -274,8 +275,9 @@ class wfnIO:
 		#WRITE
 		f.write_vals('i', sz)
 		#WRITE
-		data_view = data.view(float64)
-		f.write_vals('d'*data_view.size, *data_view)
+		data_view = data.ravel().view(float64)
+		f.write_vals('d'*len(data_view), *data_view)
+		#f.write_vals2('d', data_view)
 
 	def from_file(self, fname, full=True):
 		self.read_header(full)
@@ -285,12 +287,15 @@ class wfnIO:
 		fname_old = self.fname
 		self.fname = fname
 		self.f = None
+                pos = 0
 		try:
 			self.write_header(full)
+                        pos = file.tell(self.f)
 			self.f.close()
 		finally:
 			self.fname = fname_old
 			self.f = f_old
+                return pos
 
 	def __repr__(self):
 		bool_repr = { False:'False', True:'True' }
@@ -306,17 +311,29 @@ class wfnIO:
 		%s
 	Reciprocal tensor:
 		%s
+        Number of atoms: %d
+        Elements:
+                %s
+        Atomic positions:
+                %s
+        Fractional translations:
+                %s
 	Symmetry els:
 		%s'''%\
 		(self.fname, self.fname, self.name, self.date, self.time,
 		common.flavors[self.flavor], self.ecutrho,
 		array_str(self.bvec,50,6).replace('\n','\n\t\t'),
 		array_str(self.bdot,50,6).replace('\n','\n\t\t'),
+                self.nat, self.atyp,
+                array_str(self.apos.T,50,6).replace('\n','\n\t\t'),
+                array_str(self.tnp.T,50,6).replace('\n','\n\t\t'),
 		#array_str(transpose(self.mtrx,[2,1,0]),50,6).replace('\n','\n\t\t'),
 		array_str(self.mtrx,50,6).replace('\n','\n\t\t'),
 		)
 		if self.ftype==1:
 			str+='''
+	Energy cutoff: %f
+	Number of bands: %d
 	Number of k-pts: %d
 	K-grid:
 		%s
@@ -336,7 +353,7 @@ class wfnIO:
 		%s
 </wfnIO>
 '''%\
-			(self.nk,
+			(self.ecutwfn, self.nbands, self.nk,
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
 			array_str(self.kpt.T,50,6).replace('\n','\n\t\t'),

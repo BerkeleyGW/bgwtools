@@ -1,0 +1,1 @@
+../../../codes/scripts/decimate_patched.py

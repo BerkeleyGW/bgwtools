@@ -74,9 +74,9 @@ if print_q:
         print "%i/%i q points complete"%(ik,nkf)
         for ikp in range(nkf):
             qvec=fullbz.fk[:,keep_full[ik]]-fullbz.fk[:,keep_full[ikp]]
-            if qvec[0]<0:
+            if qvec[0]<-TOL:
                 qvec[0]=1+qvec[0]
-            if qvec[1]<0:
+            if qvec[1]<-TOL:
                 qvec[1]=1+qvec[1]
             if ik==0 and ikp==0:
                 qpoints=array([qvec])
@@ -100,12 +100,14 @@ if print_q:
             if all(abs(qpoints[iq,:]-fullbz.fk[:,ik])<TOL):
                 keep_q += [fullbz.indr[ik]-1]
                 break
+            if ik==fullbz.nf-1:
+                print "Error: q-point not found",qpoints[iq,0],qpoints[iq,1]
     keep_q=unique(keep_q)
     print "Number of q-points = ",len(keep_q)
     for iq in range(len(keep_q)):
         f_qpt.write('%13.10f %13.10f %13.10f 1.0 \n'%(fullbz.rk[0,iq],fullbz.rk[1,iq],fullbz.rk[2,iq]))
 
-
+f_qpt.close()
 if raw_input('Writing data to %s. Are you sure? [y/N] '%(fname_out))!='y':
     sys.exit(0)
 

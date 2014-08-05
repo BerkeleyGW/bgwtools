@@ -32,9 +32,9 @@ class fullbzIO:
             self.mtrx_i[itran,:,:] = np.linalg.inv(self.mtrx[itran,:,:])
         line=f.readline()
         lines=[]
-        while len(line.split())==9:
+        while len(line.split())!=1:
             line = np.genfromtxt(line.split(),dtype=np.float64)
-            line=line.reshape((3,3))
+            #line=line.reshape((-1,3))
             lines.append(line)
             line=f.readline()
         lines=np.array(lines)

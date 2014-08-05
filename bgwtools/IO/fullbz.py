@@ -15,7 +15,10 @@ class fullbzIO:
         print self.nf
         lines = [f.readline() for ik in range(self.nf)]
         info = np.genfromtxt(lines, dtype=None)
-        self.fk = info[['f0','f1','f2']].view(np.float64).reshape((3,-1), order='F')
+        if self.nf==1:
+            self.fk= np.array([info[['f0','f1','f2']]]).view(np.float64).reshape((3,-1), order='F')
+        else:
+            self.fk = info[['f0','f1','f2']].view(np.float64).reshape((3,-1), order='F')
         self.itran = info['f3']
         self.indr = info['f4']
 

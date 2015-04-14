@@ -244,6 +244,20 @@ class wfnIO:
 		#f.write_vals2('i', gvec.ravel('F'))
 		f.write_vals('i'*len(gvec.ravel()), *gvec.ravel('F'))
 
+        def get_gvectors_buffer(self):
+            '''Results an ndarray that serves as buffer for calls to read_gvectors'''
+
+            return empty((3, self.ngkmax), dtype=int, order='F')
+
+        def get_data_buffer(self):
+            '''Results an ndarray that serves as buffer for calls to read_data'''
+
+            if self.flavor==common.flavor.NONE:
+                raise Exception('Flavor is unknown.')
+
+            dtype = common.get_numpy_flavor(self.flavor)
+            return empty((self.ngkmax, self.ns), dtype=dtype, order='F')
+
 	def read_data(self, data=None):
 		f = self.f
 		#READ
@@ -371,6 +385,7 @@ if __name__=='__main__':
 		print 'Usage: %0 WFN|RHO [...]'%(sys.argv[0])
 		sys.exit()
 
+        set_printoptions(suppress=True)
 	for fname in sys.argv[1:]:
 		wfn = wfnIO(fname, full=False)
 		print wfn

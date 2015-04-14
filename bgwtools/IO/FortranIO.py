@@ -53,8 +53,8 @@ import struct
 import numpy
 
 
-_float_precisions = 'df'
-_numpy_precisions = {'d': numpy.float64, 'f': numpy.float32}
+_float_precisions = 'sdfzc'
+_numpy_precisions = {'d': numpy.float64, 's': numpy.float32, 'f': numpy.float32, 'z': numpy.complex128, 'c': numpy.complex64}
 _int_precisions = 'hilq'
 
 def cast_data(data, prec, ENDIAN='='):
@@ -271,12 +271,20 @@ class FortranFile(file):
         self.write(s)
         self._write_check(length_bytes)
 
-    def read(self, prec=''):
+    def read_old(self, prec=''):
         data_str = self.readline()
         if prec=='':
             return data_str
         else:
             return cast_array(data_str, prec, self.ENDIAN)
+
+    def read(self, prec=''):
+        data_str = self.readline()
+        if prec=='':
+            return data_str
+        else:
+            return numpy.frombuffer(data_str, prec)
+
 
     def write_floats(self, reals, prec='f'):
         """Write an array of floats in given precision
@@ -336,3 +344,12 @@ class FortranFile(file):
 
         item = self.pack(fmt, *data)
         self.writeline(item)
+
+    def write_vals2(self, fmt, data):
+        sz = numpy.zeros((1,), dtype=fmt)
+        sz = len(sz.view('c'))
+        sz *= len(data)
+
+        self.write(struct.pack(self.ENDIAN+self.HEADER_PREC, sz))
+        data.tofile(self, fmt)
+        self.write(struct.pack(self.ENDIAN+self.HEADER_PREC, sz))

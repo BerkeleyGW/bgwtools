@@ -56,6 +56,6 @@ class fullbzIO:
 
 if __name__ == '__main__':
     import sys
-    fullbz = fullbzIO(sys.argv[1], sys.argv[2])
+    fullbz = fullbzIO(sys.argv[1])
 
-    print rotator
+    print fullbz

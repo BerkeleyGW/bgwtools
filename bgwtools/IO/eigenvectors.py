@@ -4,12 +4,13 @@ import FortranIO
 from numpy import *
 
 class eigenvectorsIO:
-	def __init__(self, fname=None, num_evecs=None):
+	def __init__(self, fname=None, num_evecs=None, full=False):
 		self.fname=fname
 		self.f=None
 		self.nk=0
 		self.cur_evec=0
 		self.num_evecs = 0
+                self.full=full
 
 		if fname:
 			self.from_file(self.fname, num_evecs)
@@ -22,13 +23,13 @@ class eigenvectorsIO:
 		f = self.f
 		
 		#READ
-		self.ns = f.read('i')
+		self.ns = f.read('i')[0]
 		#READ
-		self.nv = f.read('i')
+		self.nv = f.read('i')[0]
 		#READ
-		self.nc = f.read('i')
+		self.nc = f.read('i')[0]
 		#READ
-		self.nk = f.read('i')
+		self.nk = f.read('i')[0]
 
 		self.num_evecs = self.ns * self.nv * self.nc * self.nk
 		if not (isinstance(num_evecs,int)):
@@ -38,7 +39,10 @@ class eigenvectorsIO:
 		self.kpt = f.read('d').reshape((3,self.nk), order='F')
 
 		self.evals = empty(num_evecs ,dtype='d')
-		self.evecs = empty((num_evecs,self.num_evecs), dtype='d')
+                fact = 1
+                if self.full:
+                    fact = 2
+		self.evecs = empty((num_evecs,fact*self.num_evecs), dtype='d')
 
 	def read_evecs(self, num_evecs=None):
 		if not self.f:

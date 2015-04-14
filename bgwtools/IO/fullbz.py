@@ -15,21 +15,40 @@ class fullbzIO:
         print self.nf
         lines = [f.readline() for ik in range(self.nf)]
         info = np.genfromtxt(lines, dtype=None)
-        self.fk = info[['f0','f1','f2']].view(np.float64).reshape((3,-1), order='F')
-        self.itran = info['f3']
-        self.indr = info['f4']
+        if self.nf==1:
+            self.fk= np.array([info[['f0','f1','f2']]]).view(np.float64).reshape((3,-1), order='F')
+            self.itran = np.array([info['f3']])
+            self.indr = np.array([info['f4']])
+        else:
+            self.fk = info[['f0','f1','f2']].view(np.float64).reshape((3,-1), order='F')
+            self.itran = info['f3']
+            self.indr = info['f4']
 
         self.ntran = int(f.readline())
-        self.mtrx = np.fromstring(f.readline(), dtype=int, sep=' ').reshape((3,3,-1), order='F')
-        self.mtrx_i = np.empty_like(self.mtrx)
+        print self.ntran
+        lines = [f.readline() for ik in range(self.ntran)]
+        info = np.genfromtxt(lines, dtype=int)
+        self.mtrx= info.reshape((self.ntran,3,3), order='F')
+        self.mtrx_i= np.zeros(np.shape(self.mtrx),dtype=np.float64)
         for itran in range(self.ntran):
-            self.mtrx_i[:,:,itran] = np.linalg.inv(self.mtrx[:,:,itran])
-        self.tnp = np.fromstring(f.readline(), dtype=float, sep=' ').reshape((3,-1), order='F')
+            self.mtrx_i[itran,:,:] = np.linalg.inv(self.mtrx[itran,:,:])
+        line=f.readline()
+        lines=[]
+        while len(line.split())!=1:
+            line = np.genfromtxt(line.split(),dtype=np.float64)
+            #line=line.reshape((-1,3))
+            lines.append(line)
+            line=f.readline()
+        lines=np.array(lines)
+        self.tnp = lines
         assert np.all(np.abs(self.tnp)<1e-12)
 
-        self.nrk = int(f.readline())
+        self.nrk = int(line)
         lines = [f.readline() for ik in range(self.nrk)]
-        self.rk = np.genfromtxt(lines, dtype=float).T
+        if self.nrk==1:
+            self.rk = np.array([np.genfromtxt(lines, dtype=float)]).T
+        else:
+            self.rk = np.genfromtxt(lines, dtype=float).T
         
         f.close()
 

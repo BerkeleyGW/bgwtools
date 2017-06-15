@@ -53,9 +53,9 @@ def dump_file(fname):
             tag = f.read()
         except:
             break
-        print tag
         name = re_name.search(tag).group(1)
         attrs = dict(re_tag.findall(tag))
+        print tag
         if len(attrs):
             print attrs
 

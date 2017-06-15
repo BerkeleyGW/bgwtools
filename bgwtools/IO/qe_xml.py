@@ -19,8 +19,8 @@ class IotkFile(FortranFile):
         self.cur_level = 0
         self.re_obj = re.compile(r'type="([a-zA-Z]+)"')
 
-    def read_xml_field(self):
-        header1 = FortranFile.read(self, self.HEADER_PREC)[0]
+    def read_xml_field(self, force_rec_len=None):
+        header1 = FortranFile.read(self, self.HEADER_PREC, force_rec_len=force_rec_len)[0]
         control = header1 % 256
         taglen = header1 // 256
         rec = FortranFile.read_record(self)
@@ -44,25 +44,23 @@ class IotkFile(FortranFile):
         buf += data_str
         FortranFile.writeline(self, buf)
 
-    def read_field(self):
+    def read_field(self, force_rec_len=None):
         if self.last_fmt==None:
-            obj = self.read_xml_field()
+            obj = self.read_xml_field(force_rec_len=force_rec_len)
             self.last_tag = obj[1]
             match = self.re_obj.search(obj[1])
             if match is None:
                 self.last_fmt = None
             else:
                 fmt = match.group(1)
-                #self.last_fmt = {'integer':np.int32, 'real':np.float64,
-                #    'complex':np.complex128}[fmt]
                 self.last_fmt = {'integer':np.int32, 'real':np.float64,
-                    'complex':np.complex128}[fmt]
+                    'complex':np.complex128, 'logical':np.int32}[fmt]
             return 0, obj[0], obj[1]
         else:
             fmt = self.last_fmt
             self.last_fmt = None
             self.last_tag = None
-            rec = self.read_record()
+            rec = self.read_record(force_rec_len=force_rec_len)
             rec.read('i', 1)
             #return 1, fmt, np.frombuffer(rec.read(None), self.ENDIAN+fmt)
             return 1, fmt, np.frombuffer(rec.read(None), fmt)
@@ -72,7 +70,14 @@ class IotkFile(FortranFile):
         if obj[0]==0:
             self.write_xml_field(obj[1], obj[2])
         else:
-            self.write_vals('i' + obj[1]*len(obj[2]), 0, *obj[2].tolist())
+            try:
+                _len = len(obj[2])
+            except:
+                _len = -1
+            if _len>0:
+                self.write_vals('i' + obj[1]*len(obj[2]), 0, *obj[2].tolist())
+            else:
+                self.write_vals('i' + obj[1], 0, obj[2])
 
 
 if __name__ == '__main__':

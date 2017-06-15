@@ -349,6 +349,8 @@ class wfnIO:
 	Energy cutoff: %f
 	Number of bands: %d
 	Number of k-pts: %d
+	Number of G-gvectors per k-point:
+		%s
 	K-grid:
 		%s
 	K-shifts:
@@ -368,6 +370,7 @@ class wfnIO:
 </wfnIO>
 '''%\
 			(self.ecutwfn, self.nbands, self.nk,
+			array_str(self.ngk,50,6).replace('\n','\n\t\t'),
 			array_str(self.kgrid,50,6).replace('\n','\n\t\t'),
 			array_str(self.kshift,50,6).replace('\n','\n\t\t'),
 			array_str(self.kpt.T,50,6).replace('\n','\n\t\t'),

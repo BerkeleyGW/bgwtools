@@ -98,7 +98,10 @@ class FortranRecord(object):
         """
 
         if num:
-            sz = num*struct.calcsize(prec)
+            if prec is None:
+                sz = num
+            else:
+                sz = num*struct.calcsize(prec)
             data = self.data_str[self._pos: self._pos+sz]
             self._pos += sz
         else:
@@ -197,12 +200,17 @@ class FortranFile(file):
         """Write the header for the given number of bytes"""
         self.write(struct.pack(self.ENDIAN+self.HEADER_PREC, number_of_bytes))
 
-    def readline(self):
+    def readline(self, force_rec_len=None):
         """Read a single fortran record as a string"""
+
         l = self._read_check()
+        if force_rec_len is not None:
+            print l, force_rec_len
+            l = force_rec_len
         data_str = self._read_exactly(l)
         check_size = self._read_check()
-        if check_size != l:
+        if check_size != l and force_rec_len is None:
+            print check_size, l
             raise IOError('Error reading record from data file')
         self._pos += 1
         return data_str
@@ -252,8 +260,8 @@ class FortranFile(file):
     def tell(self):
         return self._pos
 
-    def read_record(self):
-        data_str = self.readline()
+    def read_record(self, force_rec_len=None):
+        data_str = self.readline(force_rec_len=force_rec_len)
         rec = FortranRecord(data_str, self.ENDIAN)
         return rec
 
@@ -278,8 +286,8 @@ class FortranFile(file):
         else:
             return cast_array(data_str, prec, self.ENDIAN)
 
-    def read(self, prec=''):
-        data_str = self.readline()
+    def read(self, prec='', force_rec_len=None):
+        data_str = self.readline(force_rec_len=force_rec_len)
         if prec=='':
             return data_str
         else:

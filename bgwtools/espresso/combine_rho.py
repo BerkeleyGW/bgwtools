@@ -14,18 +14,19 @@
 import numpy as np
 from bgwtools.IO.qe_xml import IotkFile
 import re
-from get_rho import get_rho
+from rho_io import read_rho, write_rho
 from fractions import gcd
 
 do_plot = False
+
 
 def lcm(a,b):
     return abs(a)*abs(b)/gcd(a,b) if a and b else 0
 
 
 def combine_rho(fname_in1, fname_in2, fname_out):
-    rho1 = get_rho(fname_in1)
-    rho2 = get_rho(fname_in2)
+    rho1 = read_rho(fname_in1)
+    rho2 = read_rho(fname_in2)
     shape1 = rho1.shape
     shape2 = rho2.shape
     assert len(shape1)==3 and len(shape2)==3
@@ -48,23 +49,7 @@ def combine_rho(fname_in1, fname_in2, fname_out):
                 for ix in range(fact[0]):
                     rho_out[ix*nx:(ix+1)*nx, iy*ny:(iy+1)*ny, iz*nz:(iz+1)*nz] += rhos[i]
 
-    frho_out = IotkFile(fname_out, mode='wb')
-    f = frho_out.write_field
-    f((0,5,'<?iotk version="1.2.0"?>'))
-    f((0,5,'<?iotk file_version="1.0"?>'))
-    f((0,5,'<?iotk binary="T"?>'))
-    f((0,5,'<?iotk qe_syntax="F"?>'))
-    f((0,1,'<Root>'))
-    f((0,1,'<CHARGE-DENSITY>'))
-    f((0,3,'<INFO nr1="{}" nr2="{}" nr3="{}"/>'.format(*rho_out.shape)))
-    for iz in range(rho_out.shape[2]):
-        buf = rho_out[...,iz].ravel(order='F')
-        size = len(buf)
-        f((0,1,'<z.{} type="real" size="{}" kind="8">'.format(iz+1,size)))
-        f((1,'d',buf))
-        f((0,2,'</z.{}>'.format(iz+1)))
-    f((0,2,'</CHARGE-DENSITY>'))
-    f((0,2,'</Root>'))
+    write_rho(fname_out, rho_out)
 
     if do_plot:
         nr3 = rho_out.shape[2]

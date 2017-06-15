@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This script extracts the charge density from a QE calculation.
+# Script to read/write charge density files from QE.
 #
 # Felipe H. da Jornada, Feb 2015.
 
@@ -9,7 +9,7 @@ from bgwtools.IO.qe_xml import IotkFile
 import re
 
 
-def get_rho(fname):
+def read_rho(fname):
     re_tag = re.compile(r'''([^\s]*)=['"]([^'"]+)['"]''')
     re_name = re.compile(r'''<([^\s]*)''')
     type_dict = {'integer':np.int32, 'real':np.float64, 'complex':np.complex128, 'logical':np.int32}
@@ -44,8 +44,29 @@ def get_rho(fname):
 
     print('Done reading charge density file '+fname)
     print('Sum of charge density: {}'.format(rho.sum()))
+    print('Integral of density: {} el/(cell volume)'.format(rho.sum()/np.product(rho.shape)))
     print('')
     return rho
+
+
+def write_rho(fname, rho):
+    frho = IotkFile(fname, mode='wb')
+    f = frho.write_field
+    f((0,5,'<?iotk version="1.2.0"?>'))
+    f((0,5,'<?iotk file_version="1.0"?>'))
+    f((0,5,'<?iotk binary="T"?>'))
+    f((0,5,'<?iotk qe_syntax="F"?>'))
+    f((0,1,'<Root>'))
+    f((0,1,'<CHARGE-DENSITY>'))
+    f((0,3,'<INFO nr1="{}" nr2="{}" nr3="{}"/>'.format(*rho.shape)))
+    for iz in range(rho.shape[2]):
+        buf = rho[...,iz].ravel(order='F')
+        size = len(buf)
+        f((0,1,'<z.{} type="real" size="{}" kind="8">'.format(iz+1,size)))
+        f((1,'d',buf))
+        f((0,2,'</z.{}>'.format(iz+1)))
+    f((0,2,'</CHARGE-DENSITY>'))
+    f((0,2,'</Root>'))
 
 
 if __name__=="__main__":
@@ -56,7 +77,7 @@ if __name__=="__main__":
         print
         sys.exit(1)
     fname = sys.argv[1]
-    rho = get_rho(fname)
+    rho = read_rho(fname)
 
     #exit()
     nr3 = rho.shape[2]

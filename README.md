@@ -1,10 +1,9 @@
-
-    BerkeleyGW Tools
-    Copyright (C) 2011 Felipe Homrich da Jornada
+BerkeleyGW Tools
+Copyright (C) 2011 Felipe Homrich da Jornada
 
 
 This python package provides a set of abstraction classes and tools to 
- convert, analyze and hack BerkeleyGW-related data.
+convert, analyze and hack BerkeleyGW-related data.
 
 
 INSTALL

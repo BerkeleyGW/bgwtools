@@ -3,7 +3,7 @@
 from __future__ import division
 
 #maximum spacing between bands
-max_delta=2.0 #eV
+max_delta=0.75 #eV
 #maximum lapacian compared to the std
 max_lap=1.0
 #max_lap=0.5
@@ -11,7 +11,8 @@ max_lap=1.0
 #graphene_like=False
 graphene_like=True
 #E_Fermi=-1.54
-E_Fermi=-1.0845
+#E_Fermi=-1.0845
+E_Fermi=-1.5168
 
 
 import sys

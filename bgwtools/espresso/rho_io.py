@@ -9,12 +9,13 @@ from bgwtools.IO.qe_xml import IotkFile
 import re
 
 
-def read_rho(fname):
+def read_rho(fname, verbose=True):
     re_tag = re.compile(r'''([^\s]*)=['"]([^'"]+)['"]''')
     re_name = re.compile(r'''<([^\s]*)''')
     type_dict = {'integer':np.int32, 'real':np.float64, 'complex':np.complex128, 'logical':np.int32}
     f = IotkFile(fname)
-    print('Reading charge density file '+fname)
+    if verbose:
+        print('Reading charge density file '+fname)
     while True:
         # Read all tags
         try:
@@ -31,7 +32,8 @@ def read_rho(fname):
 
         if name=='INFO':
             nr1, nr2, nr3 = [int(attrs[nr]) for nr in ('nr1','nr2','nr3')]
-            print('Setting up FFTgrid: {} x {} x {}'.format(nr1, nr2, nr3))
+            if verbose:
+                print('Setting up FFTgrid: {} x {} x {}'.format(nr1, nr2, nr3))
             rho = np.empty((nr1,nr2,nr3), dtype=np.float64, order='F')
 
         if obj[0]==1 and name[:2]=='z.':
@@ -42,10 +44,11 @@ def read_rho(fname):
             data = obj[2]
             rho[:,:,iz-1] = data.reshape((nr1,nr2), order='F')
 
-    print('Done reading charge density file '+fname)
-    print('Sum of charge density: {}'.format(rho.sum()))
-    print('Integral of density: {} el/(cell volume)'.format(rho.sum()/np.product(rho.shape)))
-    print('')
+    if verbose:
+        print('Done reading charge density file '+fname)
+        print('Sum of charge density: {}'.format(rho.sum()))
+        print('Integral of density: {} el/(cell volume)'.format(rho.sum()/np.product(rho.shape)))
+        print('')
     return rho
 
 
@@ -81,16 +84,23 @@ if __name__=="__main__":
 
     #exit()
     nr3 = rho.shape[2]
-    import seaborn as sns
-    plt = sns.plt
-    interp = 'bicubic'
+    try:
+        import sns
+        plt = sns.plt
+    except:
+        import matplotlib.pyplot as plt
+
+    interp = 'nearest'
+    #interp = 'bicubic'
     #interp = 'catrom'
     #interp = 'sinc'
     iz = nr3//2
     iz = 1045
-    #plt.imshow(rho[:,:,iz], cmap=plt.cm.hot, interpolation=interp)
-    #plt.colorbar()
+    iz = 0
+    #plt.imshow(rho[iz,:,:], cmap=plt.cm.hot, interpolation=interp)
+    plt.imshow(np.sum(rho, axis=1), cmap=plt.cm.hot, interpolation=interp)
+    plt.colorbar()
 
-    plt.plot(np.arange(nr3), rho.sum(axis=0).sum(axis=0))
+    #plt.plot(np.arange(nr3), rho.sum(axis=0).sum(axis=0))
 
     plt.show()

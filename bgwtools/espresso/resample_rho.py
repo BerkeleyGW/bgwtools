@@ -51,7 +51,7 @@ def resample_rho(fname_in, fname_out, shape_out, plot):
     write_rho(fname_out, rho_out)
 
     if plot:
-        import seaborn as sns
+        import sns
         plt = sns.plt
         for i, (title, rho) in enumerate(zip(('Input','Output'), (rho_in, rho_out))):
             nr3 = rho.shape[2]

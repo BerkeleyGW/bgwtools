@@ -11,7 +11,7 @@ import FortranIO
 from numpy import *
 
 class wfnIO:
-	ftypes=['UNK','WFN','RHO']
+	ftypes=['UNK','WFN','RHO','VXC']
 	def __init__(self, fname=None, full=True):
 		self.fname = fname
 		self.name = ''

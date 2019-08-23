@@ -24,7 +24,7 @@ def get_numpy_flavor(iflavor, die=True):
 		else:
 			raise ValueError('Invalid flavor "%s"'%(str_))
 
-ftypes=['UNK','WFN','RHO','VXC']
+ftypes=['UNK','WFN','RHO','VXC','VSC','VKB']
 def get_ftype(str_, die=True):
 	try:
 		return ftypes.index(str_.upper())

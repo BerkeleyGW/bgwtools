@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import FortranIO
-from numpy import *
+import numpy as np
+#from numpy import *
 
 class eigenvectorsIO:
 	def __init__(self, fname=None, num_evecs=None, full=False):
@@ -38,11 +39,11 @@ class eigenvectorsIO:
 		#READ
 		self.kpt = f.read('d').reshape((3,self.nk), order='F')
 
-		self.evals = empty(num_evecs ,dtype='d')
+		self.evals = np.empty(num_evecs, dtype=np.float64)
                 fact = 1
                 if self.full:
                     fact = 2
-		self.evecs = empty((num_evecs,fact*self.num_evecs), dtype='d')
+		self.evecs = np.empty((num_evecs,fact*self.num_evecs), dtype=np.complex128)
 
 	def read_evecs(self, num_evecs=None):
 		if not self.f:
@@ -57,7 +58,7 @@ class eigenvectorsIO:
 			#READ
 			self.evals[i] = f.read('d')
 			#READ
-			self.evecs[i,:] = f.read('d')
+			self.evecs[i,:] = f.read('d').view(np.complex128)
 
 	def from_file(self, fname, num_evecs):
 		self.read_header(num_evecs)

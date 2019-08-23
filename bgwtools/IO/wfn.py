@@ -11,7 +11,6 @@ import FortranIO
 from numpy import *
 
 class wfnIO:
-	ftypes=['UNK','WFN','RHO','VXC']
 	def __init__(self, fname=None, full=True):
 		self.fname = fname
 		self.name = ''
@@ -22,10 +21,10 @@ class wfnIO:
                 self.ns = 0
                 self.nk = 0
                 self.ng = 0 
-		self.gvec = empty((3,0), order='F')
+		self.gvec = empty((3,0), order='F', dtype='i')
 		self.kpt = empty((3,0), order='F')
-		self.ifmin = empty((0,0), order='F')
-		self.ifmax = empty((0,0), order='F')
+		self.ifmin = empty((0,0), order='F', dtype='i')
+		self.ifmax = empty((0,0), order='F', dtype='i')
 		self.energies = empty((0,0,0), order='F')
 		self.occupations = empty((0,0,0), order='F')
 		self.flavor = common.flavor.NONE
@@ -106,7 +105,7 @@ class wfnIO:
 		#READ
 		buf = f.read_record()
 		self.apos = empty((3,self.nat), order='F')
-		self.atyp = empty(self.nat)
+		self.atyp = empty(self.nat, dtype='i')
 		for n in range(self.nat):
 			self.apos[:,n] = buf.read('d',3)
 			self.atyp[n] = buf.read('i',1)
@@ -130,6 +129,11 @@ class wfnIO:
 			#READ
 			self.occupations = f.read('d').reshape((self.nbands, self.nk, self.ns), order='F')
 
+			if (not full): return
+			self.gvec = empty((3,self.ng), order='F', dtype='i')
+			#READ
+			self.read_gvectors(self.gvec)
+		else:
 			if (not full): return
 			self.gvec = empty((3,self.ng), order='F', dtype='i')
 			#READ
@@ -321,6 +325,7 @@ class wfnIO:
 	Work time: %s
 	Flavor: %s
 	Density cut-off: %f
+        Number of density G-vectors: %d
 	Reciprocal vectors:
 		%s
 	Reciprocal tensor:
@@ -335,7 +340,7 @@ class wfnIO:
 	Symmetry els:
 		%s'''%\
 		(self.fname, self.fname, self.name, self.date, self.time,
-		common.flavors[self.flavor], self.ecutrho,
+		common.flavors[self.flavor], self.ecutrho, self.ng,
 		array_str(self.bvec,50,6).replace('\n','\n\t\t'),
 		array_str(self.bdot,50,6).replace('\n','\n\t\t'),
                 self.nat, self.atyp,
